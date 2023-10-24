@@ -132,10 +132,10 @@ class TransformerBlock(nn.Module):
         )
         self.dropout1 = nn.Dropout(config.embed_dropout if layer_idx == 0 else config.resid_dropout)
         self.drop_path1 = StochasticDepth(config.drop_path, mode="row")
-        self.norm1 = norm_cls(config.d_model)
+        self.norm1 = nn.LayerNorm(config.d_model)
         self.dropout2 = nn.Dropout(config.resid_dropout)
         self.drop_path2 = StochasticDepth(config.drop_path, mode="row")
-        self.norm2 = norm_cls(config.d_model)
+        self.norm2 = nn.LayerNorm(config.d_model)
 
     def forward(self, hidden_states, residual=None):
         dropped = self.drop_path1(self.dropout1(hidden_states))
@@ -160,7 +160,7 @@ class LMBackbone(nn.Module):
         self.layers =  nn.ModuleList(
             [
                 TransformerBlock(config=config, layer_idx=i)
-                for i in range(n_layers)
+                for i in range(config.n_layers)
             ]
         )
         self.drop_f = nn.Dropout(config.resid_dropout)

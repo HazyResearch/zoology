@@ -1,6 +1,10 @@
 import argparse
+from datetime import datetime
 from functools import partial
+
 from pydantic import BaseModel
+import yaml
+
 
 from zoology.utils import import_from_str
 
@@ -67,12 +71,12 @@ class DataConfig(BaseConfig):
     force_cache: bool = False 
 
 class ModelConfig(BaseConfig):
-    sequence_mixer: ModuleConfig
+    sequence_mixer: ModuleConfig = None
 
     d_model: int = 128
     n_layers: int = 2
     max_position_embeddings: int = 64
-    vocab_size=50257
+    vocab_size: int=128
 
     # num_heads=12,
     resid_dropout: float = 0.0
@@ -88,7 +92,7 @@ class TrainConfig(BaseConfig):
     model: ModelConfig = ModelConfig()
 
     
-    epochs: int = 100
+    max_epochs: int = 100
     learning_rate: float = 1e-3
 
 

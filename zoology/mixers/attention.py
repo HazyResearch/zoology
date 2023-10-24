@@ -1,5 +1,8 @@
 import torch 
 from torch import nn
+import torch.nn.functional as F
+from einops import rearrange
+import math
 
 
 class SelfAttention(nn.Module):
@@ -33,25 +36,25 @@ class MHA(nn.Module):
 
     def __init__(
         self,
-        embed_dim,
+        d_model,
         num_heads=1,
         bias=True,
         dropout=0.0,
         layer_idx=None,
     ) -> None:
         super().__init__()
-        self.embed_dim = embed_dim
+        self.d_model = d_model
         self.layer_idx = layer_idx
         self.num_heads = num_heads
         assert (
-            self.embed_dim % num_heads == 0
+            self.d_model % num_heads == 0
         ), "self.kdim must be divisible by num_heads"
-        self.head_dim = self.embed_dim // num_heads
+        self.head_dim = self.d_model // num_heads
         self.Wqkv = nn.Linear(
-            embed_dim, 3 * embed_dim, bias=bias
+            d_model, 3 * d_model, bias=bias
         )
         self.inner_attn = SelfAttention(attention_dropout=dropout)
-        self.out_proj = nn.Linear(embed_dim, embed_dim)
+        self.out_proj = nn.Linear(d_model, d_model)
 
     def forward(self, x, **kwargs):
         qkv = self.Wqkv(x)
