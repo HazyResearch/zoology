@@ -78,7 +78,8 @@ def prepare_data(config: DataConfig) -> Tuple[DataLoader]:
     Raises: 
         ValueError: If the shapes of the data are not correct.
     Example: 
-        >>> config = DataConfig(…) >>> train_dl, test_dl = prepare_data(config) 
+        >>> config = DataConfig(…) 
+        >>> train_dl, test_dl = prepare_data(config) 
     """
     if config.cache_dir is not None:
         try:
@@ -86,7 +87,7 @@ def prepare_data(config: DataConfig) -> Tuple[DataLoader]:
         except:
             print(f"Could not create cache directory {config.cache_dir}")
             config.cache_dir = None
-    cache_path = _get_cache_path()
+    cache_path = _get_cache_path(config)
     # check cache
     if config.cache_dir is not None and os.path.exists(cache_path) and not config.force_cache:
         # load from cache
@@ -102,10 +103,10 @@ def prepare_data(config: DataConfig) -> Tuple[DataLoader]:
                 print(e)
     else:
         print(f"Generating dataset...") 
-        builder = 
+        builder = config.builder.instantiate()
 
         # generate data
-        data: SyntheticData = config.builder(
+        data: SyntheticData = builder(
             num_test_examples=config.num_test_examples,
             num_train_examples=config.num_train_examples,
             input_seq_len=config.input_seq_len,
@@ -140,14 +141,14 @@ def prepare_data(config: DataConfig) -> Tuple[DataLoader]:
     return train_dl, test_dl
 
 
-def _get_cache_path(self):
-    if self.cache_dir is None:
+def _get_cache_path(config: DataConfig):
+    if config.cache_dir is None:
         return None
     config_hash = hashlib.md5(
-        json.dumps(self.config, sort_keys=True).encode()
+        json.dumps(config, sort_keys=True).encode()
     ).hexdigest()
 
     return os.path.join(
-        self.cache_dir,
+        config.cache_dir,
         f"data_{config_hash}.pt",
     )

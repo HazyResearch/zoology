@@ -1,0 +1,5 @@
+data:
+  builder: 
+    name: "zoology.data.associative_recall.gap_power_distr_ar"
+    kwargs:
+      num_kv_pairs: 16
