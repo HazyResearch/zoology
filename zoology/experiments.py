@@ -3,7 +3,7 @@ import torch
 import numpy as np
 import random 
 from task import LMSynthetic
-from data import ICLDataModule
+from zoology.data.utils import prepare_data
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print(f"Device: {device}")
@@ -37,20 +37,12 @@ def set_determinism(args):
     torch.manual_seed(args.seed)
     torch.cuda.manual_seed(args.seed)
 
-def load_data(args):
-    dataset = ICLDataModule(
-        args.n_train,
-        args.n_test,
-        args.vocab_size,
-        args.input_seq_len,
-    )
-    dataset.setup()
-    return dataset.train_dataloader(), dataset.test_dataloader()
+
 
 def create_task_instance(args):
     task = None
     task_name = args.task
-    train_dataloader, test_dataloader = load_data(args)
+    train_dataloader, test_dataloader = prepare_data(args)
 
     if(task_name=='lm_synthetic'):
         task = LMSynthetic(

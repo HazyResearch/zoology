@@ -15,15 +15,17 @@ def accuracy_ignore_index(logits, y, ignore_index=-100):
 
 
 class LMSynthetic:
-    def __init__(self,   
-                input_seq_len,
-                vocab_size,
-                d_model=256,
-                num_heads=4,
-                n_layers=4,
-                train_data=None,
-                test_data=None,
-                 **kwargs):
+    def __init__(
+        self,   
+        input_seq_len,
+        vocab_size,
+        d_model=256,
+        num_heads=4,
+        n_layers=4,
+        train_data=None,
+        test_data=None,
+        **kwargs
+    ):
         self.input_seq_len = input_seq_len
         self.vocab_size = vocab_size
         self.d_model = d_model

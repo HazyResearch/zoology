@@ -1,8 +1,19 @@
 from setuptools import setup
 
-_REQUIRED = [
 
+_REQUIRED = [
+    "numpy",
+    "torchmetrics",
+    "einops",
+    "tqdm",
 ]
+
+# ensure that torch is installed, and send to torch website if not
+try:
+    import torch
+except ImportError:
+    raise ValueError("Please install torch first: https://pytorch.org/get-started/locally/")
+
 
 setup(
     name="zoology",
