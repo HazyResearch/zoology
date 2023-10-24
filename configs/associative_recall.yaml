@@ -3,3 +3,10 @@ data:
     name: "zoology.data.associative_recall.gap_power_distr_ar"
     kwargs:
       num_kv_pairs: 16
+    
+model:
+  sequence_mixer:
+    name: "zoology.mixers.attention.MHA"
+    kwargs: 
+      dropout: 0.1
+      num_heads: 1

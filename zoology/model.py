@@ -7,8 +7,10 @@ import torch.nn.functional as F
 from torchvision.ops import StochasticDepth
 from einops import rearrange
 
+from zoology.config import ModelConfig
 
-class GPT2Embeddings(nn.Module):
+
+class TokenEmbeddings(nn.Module):
     def __init__(
         self,
         embed_dim,
@@ -20,6 +22,7 @@ class GPT2Embeddings(nn.Module):
         dtype='torch.float32',
     ):
         """
+        GPT-2 Learnable Token and Position Embeddings.
         If max_position_embeddings <= 0, there's no position embeddings
         Wwe embed to word_embe_proj_dim dimension then project up to embed_dim
         """
@@ -92,75 +95,14 @@ def _init_weights(
                 )
 
 
-class SelfAttention(nn.Module):
-    def __init__(self, attention_dropout=0.0):
-        super().__init__()
-        self.dropout_p = attention_dropout
-
-    def forward(self, qkv):
-        """Implements the multihead softmax attention.
-        Arguments
-        ---------
-            qkv: The tensor containing the query, key, and value. (B, S, 3, H, D)
-            causal: if passed, will override self.causal
-        """
-        batch_size, seqlen = qkv.shape[0], qkv.shape[1]
-        q, k, v = qkv.unbind(dim=2)
-        softmax_scale = 1.0 / math.sqrt(q.shape[-1])
-        scores = torch.einsum("bthd,bshd->bhts", q, k * softmax_scale)
-        causal_mask = torch.triu(
-            torch.full((seqlen, seqlen), -10000.0, device=scores.device), 1
-        )
-        scores = scores + causal_mask.to(dtype=scores.dtype)
-        attention = torch.softmax(scores, dim=-1, dtype=v.dtype)
-        attention_drop = F.dropout(attention, self.dropout_p if self.training else 0.0)
-        output = torch.einsum("bhts,bshd->bthd", attention_drop, v)
-        return output
-
-
-class MHA(nn.Module):
-    """Multi-head self-attention and cross-attention"""
-
+class MLP(nn.Module):
     def __init__(
         self,
-        embed_dim,
-        num_heads=1,
-        bias=True,
-        dropout=0.0,
-        layer_idx=None,
-    ) -> None:
-        super().__init__()
-        self.embed_dim = embed_dim
-        self.layer_idx = layer_idx
-        self.num_heads = num_heads
-        assert (
-            self.embed_dim % num_heads == 0
-        ), "self.kdim must be divisible by num_heads"
-        self.head_dim = self.embed_dim // num_heads
-        self.Wqkv = nn.Linear(
-            embed_dim, 3 * embed_dim, bias=bias
-        )
-        self.inner_attn = SelfAttention(attention_dropout=dropout)
-        self.out_proj = nn.Linear(embed_dim, embed_dim)
-
-    def forward(self, x, **kwargs):
-        qkv = self.Wqkv(x)
-        qkv = rearrange(
-            qkv, "... (three h d) -> ... three h d", three=3, d=self.head_dim
-        )
-        context = self.inner_attn(qkv, **kwargs)
-        out = self.out_proj(rearrange(context, "... h d -> ... (h d)"))
-        return out
-
-
-class Mlp(nn.Module):
-    def __init__(
-        self,
-        in_features,
-        hidden_features=None,
-        out_features=None,
-        activation=F.gelu,
-        return_residual=False,
+        in_features: int,
+        hidden_features: int=None,
+        out_features: int=None,
+        activation: callable=F.gelu,
+        return_residual: bool=False,
     ):
         super().__init__()
         out_features = out_features or in_features
@@ -177,38 +119,23 @@ class Mlp(nn.Module):
         return y if not self.return_residual else (y, x)
 
 
-class TransformerMixerBlock(nn.Module):
-    _name_ = 'transformer_mixer'
+class TransformerBlock(nn.Module):
 
-    def __init__(
-        self,
-        d_model: int,
-        num_heads: int=1,
-        norm_cls=nn.LayerNorm,
-        dropout_cls=nn.Dropout,
-        resid_dropout1=0.1,
-        resid_dropout2=0.0,
-        drop_path1=0.0,
-        drop_path2=0.0,
-    ):
+    def __init__(self, config: ModelConfig, layer_idx: int):
         super().__init__()
-        self.sequence_mixer = MHA(
-            d_model,
-            num_heads=num_heads,
-            dropout=0.1,
-        )
-        self.state_mixer = Mlp(
-            d_model,
-            hidden_features=d_model*4,
-            out_features=d_model,
+        self.sequence_mixer = config.sequence_mixer.instantiate(d_model=config.d_model)
+        self.state_mixer = MLP(
+            config.d_model,
+            hidden_features=config.d_model * 4,
+            out_features=config.d_model,
             activation=torch.tanh,
         )
-        self.dropout1 = dropout_cls(resid_dropout1)
-        self.drop_path1 = StochasticDepth(drop_path1, mode="row")
-        self.norm1 = norm_cls(d_model)
-        self.dropout2 = dropout_cls(resid_dropout2)
-        self.drop_path2 = StochasticDepth(drop_path2, mode="row")
-        self.norm2 = norm_cls(d_model)
+        self.dropout1 = nn.Dropout(config.embed_dropout if layer_idx == 0 else config.resid_dropout)
+        self.drop_path1 = StochasticDepth(config.drop_path, mode="row")
+        self.norm1 = norm_cls(config.d_model)
+        self.dropout2 = nn.Dropout(config.resid_dropout)
+        self.drop_path2 = StochasticDepth(config.drop_path, mode="row")
+        self.norm2 = norm_cls(config.d_model)
 
     def forward(self, hidden_states, residual=None):
         dropped = self.drop_path1(self.dropout1(hidden_states))
@@ -224,39 +151,21 @@ class TransformerMixerBlock(nn.Module):
 
 
 class LMBackbone(nn.Module):
-    def __init__(
-        self,
-        d_model=768,
-        n_layers=12,
-        vocab_size=50257,
-        num_heads=12,
-        max_position_embeddings=0,
-        resid_dropout: float = 0.0,
-        embed_dropout: float = 0.1,
-        layer_norm_epsilon: float = 1e-5,
-        **kwargs
-    ) -> None:
+    def __init__(self, config: ModelConfig):
 
         super().__init__()
-        self.embeddings = GPT2Embeddings(
-            d_model, vocab_size, max_position_embeddings
+        self.embeddings = TokenEmbeddings(
+            config.d_model, config.vocab_size, config.max_position_embeddings
         )
         self.layers =  nn.ModuleList(
             [
-                TransformerMixerBlock(
-                    d_model,
-                    num_heads=num_heads,
-                    norm_cls=nn.LayerNorm,
-                    dropout_cls=nn.Dropout,
-                    resid_dropout1=embed_dropout if i == 0 else resid_dropout,
-                    resid_dropout2=resid_dropout,
-                )
+                TransformerBlock(config=config, layer_idx=i)
                 for i in range(n_layers)
             ]
         )
-        self.drop_f = nn.Dropout(resid_dropout)
-        self.ln_f = nn.LayerNorm(d_model, eps=layer_norm_epsilon)
-        self.apply(partial(_init_weights,n_layers=n_layers,))
+        self.drop_f = nn.Dropout(config.resid_dropout)
+        self.ln_f = nn.LayerNorm(config.d_model, eps=config.layer_norm_epsilon)
+        self.apply(partial(_init_weights, n_layers=config.n_layers,))
 
     def forward(self, input_ids, position_ids=None):
         hidden_states = self.embeddings(
@@ -272,46 +181,21 @@ class LMBackbone(nn.Module):
         return hidden_states
 
 
-class LMHeadModel(nn.Module):
-    def __init__(
-        self,
-        d_model=768,
-        n_layers=12,
-        vocab_size=50257,
-        num_heads=12,
-        max_position_embeddings=0,
-        resid_dropout: float = 0.0,
-        embed_dropout: float = 0.1,
-        layer_norm_epsilon: float = 1e-5,
-        pad_vocab_size_multiple: int = 1,
-        block=None,
-        **kwargs
-    ) -> None:
+class LanguageModel(nn.Module):
+    def __init__(self, config: ModelConfig):
         super().__init__()
-        if vocab_size % pad_vocab_size_multiple != 0:
-            vocab_size += pad_vocab_size_multiple - (
-                vocab_size % pad_vocab_size_multiple
+        if config.vocab_size % config.pad_vocab_size_multiple != 0:
+            config.vocab_size += config.pad_vocab_size_multiple - (
+                config.vocab_size % config.pad_vocab_size_multiple
             )
 
-        self.backbone = LMBackbone(
-            d_model=d_model,
-            n_layers=n_layers,
-            vocab_size=vocab_size,
-            num_heads=num_heads,
-            max_position_embeddings=max_position_embeddings,
-            resid_dropout=resid_dropout,
-            embed_dropout=embed_dropout,
-            layer_norm_epsilon=layer_norm_epsilon,
-            block=block,
-            **kwargs,
-        )
-        self.lm_head = nn.Linear(d_model, vocab_size, bias=False)
+        self.backbone = LMBackbone(config=config)
+        self.lm_head = nn.Linear(config.d_model, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
-        self.apply(partial(_init_weights,n_layers=n_layers,))
-        self.tie_weights()
+        self.apply(partial(_init_weights,n_layers=config.n_layers,))
 
-    def tie_weights(self):
+        # tie weights
         self.lm_head.weight = self.backbone.embeddings.word_embeddings.weight
 
     def forward(

@@ -1,70 +1,31 @@
 import argparse
 import random
+from datetime import datetime
 
 import torch
 import numpy as np 
+import torch.nn as nn
+import torch.optim as optim
+from einops import rearrange
+import torchmetrics.functional as tm_f
 import yaml
-from datetime import datetime
 
 from zoology.task import LMSynthetic
 from zoology.data.utils import prepare_data
 from zoology.config import Config
+from zoology.model import LanguageModel
+
+
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print(f"Device: {device}")
 
-# def get_args():
-#     parser = argparse.ArgumentParser(description = "arguments")
-
-#     # mode
-#     parser.add_argument("--do_profile", action="store_true", help="run profiling")
-
-#     # training configs
-#     parser.add_argument("-t", "--task", required=True, help = "task name")
-#     parser.add_argument("-s", "--seed", default=0, help = "random seed")
-#     parser.add_argument("-e", "--epochs", default=20, type=int, help = "number of epochs")
-#     parser.add_argument("-lr", "--learning_rate", default=0.0005, type=float, help="learning rate")
-#     parser.add_argument("-tb", "--train_batch", default=32, type=int, help="training batch size")
-#     parser.add_argument("-l",  "--layers", default=4, type=int, help="number of layers")
-
-#     # dataset
-#     parser.add_argument("-n_train", "--n_train", default=10000, type=int, help = "number of training examples")
-#     parser.add_argument("-n_test", "--n_test", default=500, type=int, help = "number of test examples")
-#     parser.add_argument("-v", "--vocab_size", default=20, type=int, help = "vocab size")
-#     parser.add_argument("-is", "--input_seq_len", default=100, type=int, help = "input sequence length")
-
-#     args = parser.parse_args()
-#     return args
 
 def set_determinism(args):
     random.seed(args.seed)
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
     torch.cuda.manual_seed(args.seed)
-
-
-
-def create_task_instance(args):
-    task = None
-    task_name = args.task
-    train_dataloader, test_dataloader = prepare_data(args)
-
-    if(task_name=='lm_synthetic'):
-        task = LMSynthetic(
-            input_seq_len=args.input_seq_len,
-            vocab_size=args.vocab_size,
-            device=device, 
-            task=args.task, 
-            epochs=args.epochs, 
-            lr=args.learning_rate, 
-            train_batch=args.train_batch,
-            train_data=train_dataloader,
-            test_data=test_dataloader,
-            n_layers=args.layers,
-        )
-    else:
-        assert False, f"Task {task_name} not found"
-    return task
 
 # if __name__ == "__main__":
 #     args = get_args()
@@ -79,55 +40,118 @@ def create_task_instance(args):
 
 
 
+
+def accuracy_ignore_index(logits, y, ignore_index=-100):
+    num_classes = logits.shape[-1]
+    preds = torch.argmax(logits, dim=-1)
+    logits = logits.view(-1, logits.shape[-1])
+    y = y.view(-1)
+    return tm_f.classification.accuracy(preds, y, num_classes=num_classes, ignore_index=ignore_index, average='micro', task='multiclass')
+
+
+class Trainer:
+    def __init__(
+        self,   
+        model: nn.Module, 
+        train_dataloader: DataLoader =None,
+        test_dataloader: DataLoader=None,
+        max_epochs: int = 100,
+        learning_rate: float = 1e-3
+    ):
+        self.train_dataloader = train_dataloader
+        self.testest_dataloadertloader = test_dataloader
+        self.device = kwargs["device"]
+
+    def train_epoch(self, epoch):
+        self.model.train()
+        all_outputs = []
+        all_targets = []
+        for batch_idx, (inputs, targets) in enumerate(self.train_dataloader):
+            inputs, targets = inputs.to(self.device), targets.to(self.device)
+            self.optimizer.zero_grad()
+
+            # forward
+            outputs = self.model(inputs)
+
+            # loss computation
+            outputs = outputs[0]
+            outputs = rearrange(outputs, '... C -> (...) C')
+            targets = rearrange(targets, '... -> (...)')
+            all_outputs.append(outputs)
+            all_targets.append(targets)
+            
+            loss = self.loss_fn(outputs, targets)
+            loss.backward()
+            self.optimizer.step()
+
+        # backprop
+        all_outputs = torch.cat(all_outputs, dim=0)
+        all_targets = torch.cat(all_targets, dim=0)
+        loss = self.loss_fn(all_outputs, all_targets)
+        print(f"Epoch: {epoch} | Loss: {loss.item()}")
+        
+    def test(self):
+        self.model.eval()
+        test_loss = 0
+        all_outputs = []
+        all_targets = []
+        with torch.no_grad():
+            for batch_idx, (inputs, targets) in enumerate(self.test_dataloader):
+                inputs, targets = inputs.to(self.device), targets.to(self.device)
+                self.optimizer.zero_grad()
+                outputs = self.model(inputs)
+                outputs = outputs[0]
+                outputs = rearrange(outputs, '... C -> (...) C')
+                targets = rearrange(targets, '... -> (...)')
+                all_outputs.append(outputs)
+                all_targets.append(targets)
+            all_outputs = torch.cat(all_outputs, dim=0)
+            all_targets = torch.cat(all_targets, dim=0)
+            breakpoint()
+            sample_size = all_outputs.shape[0] // self.input_seq_len
+            loss = self.loss_fn(all_outputs, all_targets)
+            test_loss += loss.item()
+            test_accuracy = accuracy_ignore_index(all_outputs, all_targets)
+            print((batch_idx, len(self.test_dataloader), 'Loss: %.3f | Acc: %.3f%% | Samples: %d' % ((test_loss/(batch_idx+1)), test_accuracy, sample_size)))
+
+    def fit(self):
+        self.loss_fn = nn.CrossEntropyLoss()
+        self.optimizer = optim.AdamW(self.model.parameters(), lr=self.args["lr"])
+        self.scheduler = optim.lr_scheduler.CosineAnnealingLR(self.optimizer, T_max=self.args["epochs"], eta_min=0.0)
+        for epoch in range(self.args["epochs"]):
+            self.train_epoch(epoch)
+            self.test()
+            self.scheduler.step()
+
+    def run_profile(self):
+        from torch.profiler import profile, record_function, ProfilerActivity
+        for batch_idx, (inputs, targets) in enumerate(self.train_dataloader):
+            inputs, targets = inputs.to(self.device), targets.to(self.device)
+            with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA]) as prof:
+                self.model(inputs)
+            prof.export_chrome_trace("trace.json")
+            break
+        print("Done!")
+            
+
+        
 def main():
-    parser = argparse.ArgumentParser(allow_abbrev=False)
-    parser.add_argument('--config', type=str, default=None, help='Path to the config file')
-    parser.add_argument('--run_id', type=str, default=None, help='Run ID for the training')
-    args, extra_args = parser.parse_known_args()
 
-
-    if args.config is not None:
-        with open(args.config) as file:
-            config = yaml.load(file, Loader=yaml.FullLoader)
-    else:
-        config = {}
-    
-    # Override with any extra arguments from the command line
-    def _nested_update(config, args):
-        for key, value in args.items():
-            keys = key.split(".")
-            for key in keys[:-1]:
-                config = config.setdefault(key, {})
-            config[keys[-1]] = value
-
-    extra_args = dict([arg.lstrip("-").split("=") for arg in extra_args])
-    extra_args = {k.replace("-", "_"): v for k, v in extra_args.items()}
-    _nested_update(config, extra_args)
-    config = Config.parse_obj(config)
-
-    if config.run_id is None:
-        config.run_id = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-
-    print(config)
+    config = Config.from_cli()
 
     train_dataloader, test_dataloader = prepare_data(config.data)
+    model = LanguageModel(config=config.model)
+    breakpoint()
+    self.model.to('cuda')
 
-    task = LMSynthetic(
-        input_seq_len=config.data.input_seq_len,
-        vocab_size=config.data.vocab_size,
-        device=device, 
-        epochs=config.epochs, 
-        lr=config.learning_rate, 
-        train_batch=config.train_batch,
-        train_data=train_dataloader,
-        test_data=test_dataloader,
-        n_layers=config.layers,
+    task = Trainer(
+        model=model,
+        train_dataloader=train_dataloader,
+        test_dataloader=test_dataloader,
+        max_epochs=config.max_epochs,
+        learning_rate=config.learning_rate
     )
-    task.load_model()
-    task.run()
-
-    # train(config)
-    
+    task.fit()    
 
 if __name__ == "__main__":
     main()
