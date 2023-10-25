@@ -7,6 +7,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
+from tqdm import tqdm
 import numpy as np 
 from einops import rearrange
 import torchmetrics.functional as tm_f
@@ -14,6 +15,7 @@ import torchmetrics.functional as tm_f
 from zoology.data.utils import prepare_data
 from zoology.config import TrainConfig
 from zoology.model import LanguageModel
+from zoology.logger import WandbLogger
 
 
 def set_determinism(args):
@@ -39,11 +41,13 @@ class Trainer:
         test_dataloader: DataLoader=None,
         max_epochs: int = 100,
         learning_rate: float = 1e-3,
-        device: Union[str, int] = "cuda"
+        device: Union[str, int] = "cuda",
+        logger: WandbLogger = None
     ):
         self.model = model
         self.train_dataloader = train_dataloader
         self.test_dataloader = test_dataloader
+        self.logger = logger
 
         self.device = device
         self.max_epochs = max_epochs
@@ -53,7 +57,10 @@ class Trainer:
         self.model.train()
         all_outputs = []
         all_targets = []
-        for batch_idx, (inputs, targets) in enumerate(self.train_dataloader):
+
+        for batch_idx, (inputs, targets) in tqdm(
+            enumerate(self.train_dataloader), total=len(self.train_dataloader)
+        ):
             inputs, targets = inputs.to(self.device), targets.to(self.device)
             self.optimizer.zero_grad()
 
@@ -64,18 +71,12 @@ class Trainer:
             outputs = outputs[0]
             outputs = rearrange(outputs, '... C -> (...) C')
             targets = rearrange(targets, '... -> (...)')
-            all_outputs.append(outputs)
-            all_targets.append(targets)
             
             loss = self.loss_fn(outputs, targets)
             loss.backward()
             self.optimizer.step()
+            self.logger.log({"train/loss": loss})
 
-        # backprop
-        all_outputs = torch.cat(all_outputs, dim=0)
-        all_targets = torch.cat(all_targets, dim=0)
-        loss = self.loss_fn(all_outputs, all_targets)
-        print(f"Epoch: {epoch} | Loss: {loss.item()}")
         
     def test(self):
         self.model.eval()
@@ -83,15 +84,17 @@ class Trainer:
         all_outputs = []
         all_targets = []
         with torch.no_grad():
-            for batch_idx, (inputs, targets) in enumerate(self.test_dataloader):
+            for batch_idx, (inputs, targets) in tqdm(
+                enumerate(self.test_dataloader), total=len(self.test_dataloader)
+            ):
                 inputs, targets = inputs.to(self.device), targets.to(self.device)
                 self.optimizer.zero_grad()
                 outputs = self.model(inputs)
                 outputs = outputs[0]
                 outputs = rearrange(outputs, '... C -> (...) C')
                 targets = rearrange(targets, '... -> (...)')
-                all_outputs.append(outputs)
-                all_targets.append(targets)
+                all_outputs.append(outputs.cpu())
+                all_targets.append(targets.cpu())
             all_outputs = torch.cat(all_outputs, dim=0)
             all_targets = torch.cat(all_targets, dim=0)
 
@@ -100,6 +103,8 @@ class Trainer:
             test_loss += loss.item()
             test_accuracy = accuracy_ignore_index(all_outputs, all_targets)
             print((batch_idx, len(self.test_dataloader), 'Loss: %.3f | Acc: %.3f%% | Samples: %d' % ((test_loss/(batch_idx+1)), test_accuracy, sample_size)))
+            self.logger.log({"valid/loss": test_loss/(batch_idx+1), "valid/accuracy": test_accuracy})
+
 
     def fit(self):
         self.model.to('cuda')
@@ -123,11 +128,13 @@ class Trainer:
             
 
         
-def main():
-    config = TrainConfig.from_cli()
+def train(config: TrainConfig):    
+    logger = WandbLogger(config.logger)
+    logger.log_config(config)
 
     train_dataloader, test_dataloader = prepare_data(config.data)
     model = LanguageModel(config=config.model)
+    logger.log_model(model)
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print(f"Device: {device}")
@@ -138,9 +145,11 @@ def main():
         test_dataloader=test_dataloader,
         max_epochs=config.max_epochs,
         learning_rate=config.learning_rate,
-        device=device
+        device=device,
+        logger=logger
     )
     task.fit()    
 
 if __name__ == "__main__":
-    main()
+    config = TrainConfig.from_cli()
+    train()

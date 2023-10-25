@@ -1,8 +1,10 @@
+
+from zoology
 data:
   builder: 
     name: "zoology.data.associative_recall.gap_power_distr_ar"
     kwargs:
-      num_kv_pairs: 16
+      num_kv_pairs: 4
     
 model:
   sequence_mixer:

@@ -7,7 +7,8 @@ _REQUIRED = [
     "einops",
     "tqdm",
     "PyYAML",
-    "pydantic"
+    "pydantic",
+    "wandb"
 ]
 
 # ensure that torch is installed, and send to torch website if not

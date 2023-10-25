@@ -63,8 +63,8 @@ class DataConfig(BaseConfig):
     num_train_examples: int = 10_000
     num_test_examples: int = 1000
     input_seq_len: int = 64
-    vocab_size: int = 128
-    batch_size: int = 2
+    vocab_size: int = 8_192
+    batch_size: int = 32
     
     cache_dir: str = None
     caching: bool = True
@@ -76,7 +76,7 @@ class ModelConfig(BaseConfig):
     d_model: int = 128
     n_layers: int = 2
     max_position_embeddings: int = 64
-    vocab_size: int=128
+    vocab_size: int = 8_192
 
     # num_heads=12,
     resid_dropout: float = 0.0
@@ -86,10 +86,15 @@ class ModelConfig(BaseConfig):
     pad_vocab_size_multiple: int = 1
     # block=None,
 
+class LoggerConfig(BaseConfig):
+
+    project_name: str = "zoology"
+    
 
 class TrainConfig(BaseConfig):
     data: DataConfig = DataConfig()
     model: ModelConfig = ModelConfig()
+    logger: LoggerConfig = LoggerConfig()
 
     
     max_epochs: int = 100
@@ -97,6 +102,7 @@ class TrainConfig(BaseConfig):
 
 
     run_id: str = None
+
 
 
 

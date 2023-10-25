@@ -12,6 +12,7 @@ output
 sweep_outputs
 logs
 checkpoints
+wandb
 bert/data
 
 # Distribution / packaging

@@ -132,7 +132,7 @@ def prepare_data(config: DataConfig) -> Tuple[DataLoader]:
         shuffle=True,
     )
     test_dl = DataLoader(
-        TensorDataset(data.train_inputs, data.train_labels),
+        TensorDataset(data.test_inputs, data.test_inputs),
         batch_size=config.batch_size,
         num_workers=0,
         shuffle=True,
@@ -145,7 +145,7 @@ def _get_cache_path(config: DataConfig):
     if config.cache_dir is None:
         return None
     config_hash = hashlib.md5(
-        json.dumps(config, sort_keys=True).encode()
+        json.dumps(config.dict(), sort_keys=True).encode()
     ).hexdigest()
 
     return os.path.join(
