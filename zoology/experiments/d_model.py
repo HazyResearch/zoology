@@ -23,12 +23,10 @@ mixers = {
 
 configs = []
 for input_seq_len, num_kv_pairs in [
-    # (32, 2),
     (64, 4),
     (128, 8),
-    # (256, 16),
-    # (512, 64),
-    # (1024, 128),
+    (256, 16),
+    (512, 64),
 ]:
     if input_seq_len == 1024:
         batch_size = 64
@@ -55,8 +53,8 @@ for input_seq_len, num_kv_pairs in [
         }   
     )
 
-    for d_model in [128]:
-        for lr in [1e-3]: # np.logspace(-4, -2, 8):
+    for d_model in [64, 128, 256, 512]:
+        for lr in np.logspace(-4, -2, 4):
             for sequence_mixer in [
                 "attention",
             ]:
@@ -72,6 +70,6 @@ for input_seq_len, num_kv_pairs in [
                     model=model,
                     data=data,
                     learning_rate=lr,
-                    max_epoch=64
+                    max_epochs=64
                 )
                 configs.append(config)
