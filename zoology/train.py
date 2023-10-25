@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 import numpy as np
 from einops import rearrange
-import torchmetrics.functional as tm_f
+from torchmetrics.functional.classification import accuracy
 
 from zoology.data.utils import prepare_data
 from zoology.config import TrainConfig
@@ -23,19 +23,6 @@ def set_determinism(args):
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
     torch.cuda.manual_seed(args.seed)
-
-
-def accuracy_ignore_index(logits, y, ignore_index=-100):
-    preds = torch.argmax(logits, dim=-1)
-    return tm_f.classification.accuracy(
-        preds.flatten(),
-        y.flatten(),
-        num_classes=logits.shape[-1],
-        ignore_index=ignore_index,
-        average="micro",
-        task="multiclass",
-    )
-
 
 class Trainer:
     def __init__(
@@ -57,12 +44,15 @@ class Trainer:
         self.max_epochs = max_epochs
         self.learning_rate = learning_rate
 
-    def train_epoch(self, epoch):
+    def train_epoch(self, epoch_idx: int):
         self.model.train()
-
-        for batch_idx, (inputs, targets) in tqdm(
-            enumerate(self.train_dataloader), total=len(self.train_dataloader)
-        ):
+        iterator = tqdm(
+            self.train_dataloader, 
+            total=len(self.train_dataloader),
+            desc=f"Train Epoch {epoch_idx}/{self.max_epochs}"
+        )
+        
+        for inputs, targets in iterator:
             inputs, targets = inputs.to(self.device), targets.to(self.device)
             self.optimizer.zero_grad()
 
@@ -75,17 +65,25 @@ class Trainer:
             )
             loss.backward()
             self.optimizer.step()
+
+            # logging and printing
+            iterator.set_postfix({"loss": loss.item()})
             self.logger.log({"train/loss": loss})
 
-    def test(self):
+    def test(self, epoch_idx: int):
         self.model.eval()
+        
         test_loss = 0
-        all_logits = []
+        all_preds = []
         all_targets = []
-        with torch.no_grad():
-            for batch_idx, (inputs, targets) in tqdm(
-                enumerate(self.test_dataloader), total=len(self.test_dataloader)
-            ):
+
+        with torch.no_grad(), tqdm(
+            total=len(self.test_dataloader),
+            desc=f"Valid Epoch {epoch_idx}/{self.max_epochs}",
+            postfix={"loss": "-", "acc": "-"}
+        ) as iterator:
+            for inputs, targets in self.test_dataloader: 
+
                 inputs, targets = inputs.to(self.device), targets.to(self.device)
                 logits = self.model(inputs)
 
@@ -94,14 +92,19 @@ class Trainer:
                 )
                 test_loss += loss / len(self.test_dataloader)
 
-                all_logits.append(logits.cpu())
+                # SE: important to 
+                all_preds.append(torch.argmax(logits, dim=-1).cpu())
                 all_targets.append(targets.cpu())
+                iterator.update(1)
 
-            all_logits = torch.cat(all_logits, dim=0)
-            all_targets = torch.cat(all_targets, dim=0)
+  
+            test_accuracy = compute_accuracy(
+                torch.cat(all_preds, dim=0), 
+                torch.cat(all_targets, dim=0)
+            )
 
-            test_accuracy = accuracy_ignore_index(all_logits, all_targets)
-            print(f"Loss: {test_loss:0.2f} | Acc: {test_accuracy:0.2f}")
+            # logging and printing
+            iterator.set_postfix({"loss": test_loss.item(), "acc": test_accuracy.item()})
             self.logger.log(
                 {
                     "valid/loss": test_loss,
@@ -116,9 +119,9 @@ class Trainer:
         self.scheduler = optim.lr_scheduler.CosineAnnealingLR(
             self.optimizer, T_max=self.max_epochs, eta_min=0.0
         )
-        for epoch in range(self.max_epochs):
-            self.train_epoch(epoch)
-            self.test()
+        for epoch_idx in range(self.max_epochs):
+            self.train_epoch(epoch_idx)
+            self.test(epoch_idx)
             self.scheduler.step()
 
     def run_profile(self):
@@ -133,6 +136,12 @@ class Trainer:
             prof.export_chrome_trace("trace.json")
             break
         print("Done!")
+
+
+def compute_accuracy(preds: torch.Tensor, targets: torch.Tensor, ignore_index: int =-100):
+    return (preds == targets)[targets != ignore_index].to(float).mean()
+
+
 
 
 def train(config: TrainConfig):
