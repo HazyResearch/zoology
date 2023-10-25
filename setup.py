@@ -8,7 +8,12 @@ _REQUIRED = [
     "tqdm",
     "PyYAML",
     "pydantic",
-    "wandb"
+    "wandb",
+]
+
+OPTIONAL = [
+    "rich", 
+    "ray"
 ]
 
 # ensure that torch is installed, and send to torch website if not

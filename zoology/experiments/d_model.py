@@ -23,7 +23,7 @@ mixers = {
 
 configs = []
 for input_seq_len, num_kv_pairs in [
-    # (32, 2)
+    # (32, 2),
     (64, 4),
     (128, 8),
     # (256, 16),
@@ -50,12 +50,13 @@ for input_seq_len, num_kv_pairs in [
                 "num_kv_pairs": num_kv_pairs,
                 "train_power_a": 0.01,
                 "test_power_a": 0.01,
+                "random_non_queries": False
             }
         }   
     )
 
     for d_model in [128]:
-        for lr in np.logspace(-4, -2, 8):
+        for lr in [1e-3]: # np.logspace(-4, -2, 8):
             for sequence_mixer in [
                 "attention",
             ]:

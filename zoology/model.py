@@ -202,7 +202,5 @@ class LanguageModel(nn.Module):
         self, input_ids, position_ids=None, state=None
     ): 
         hidden_states = self.backbone(input_ids, position_ids=position_ids)
-        lm_logits = self.lm_head(hidden_states)
-        CausalLMOutput = namedtuple("CausalLMOutput", ["logits"])
-        return CausalLMOutput(logits=lm_logits)
+        return self.lm_head(hidden_states)
         

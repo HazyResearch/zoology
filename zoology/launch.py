@@ -59,7 +59,6 @@ def main(python_file, outdir, name: str, parallelize: bool, gpus: str):
     # Run each script in parallel using Ray
     if not use_ray:
         for config in configs: 
-            print(config)
             execute_config(config, outdir, not parallelize)
     else:
         completed = 0

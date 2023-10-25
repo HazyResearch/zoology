@@ -20,4 +20,3 @@ def import_from_str(path) -> Union[type, Callable]:
     except AttributeError as e:
         raise AttributeError(f"Class '{obj_name}' not found in module '{module_name}'.") from e
 
-

@@ -40,6 +40,13 @@ class BaseConfig(BaseModel):
             config.run_id = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         return config
 
+    def print(self):
+        try:
+            import rich
+            rich.print(self)
+        except ImportError:
+            print(self)
+
 
 class FunctionConfig(BaseConfig):
     name: str

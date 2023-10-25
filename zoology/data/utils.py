@@ -132,7 +132,7 @@ def prepare_data(config: DataConfig) -> Tuple[DataLoader]:
         shuffle=True,
     )
     test_dl = DataLoader(
-        TensorDataset(data.test_inputs, data.test_inputs),
+        TensorDataset(data.test_inputs, data.test_labels),
         batch_size=config.batch_size,
         num_workers=0,
         shuffle=True,
