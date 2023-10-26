@@ -6,9 +6,10 @@ from torch.nn import Module
 from zoology.config import LoggerConfig, TrainConfig
 
 class WandbLogger:
-    def __init__(self, config: LoggerConfig):
+    def __init__(self, config: TrainConfig):
         self.run = wandb.init(
-            project=config.project_name, 
+            name=config.run_id,
+            project=config.logger.project_name, 
         )
         wandb.run.log_code(
             root=str(Path(__file__).parent.parent),

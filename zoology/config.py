@@ -3,7 +3,6 @@ from datetime import datetime
 from functools import partial
 
 from pydantic import BaseModel
-import yaml
 
 
 from zoology.utils import import_from_str
@@ -11,6 +10,7 @@ from zoology.utils import import_from_str
 class BaseConfig(BaseModel):
     @classmethod
     def from_cli(cls):
+        import yaml
         parser = argparse.ArgumentParser(allow_abbrev=False)
         parser.add_argument('--config', type=str, default=None, help='Path to the config file')
         parser.add_argument('--run_id', type=str, default=None, help='Run ID for the training')
@@ -108,7 +108,8 @@ class TrainConfig(BaseConfig):
     learning_rate: float = 1e-3
 
 
-    run_id: str = None
+    launch_id: str = None
+    run_id: str = "default"
 
 
 

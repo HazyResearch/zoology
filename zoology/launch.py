@@ -1,8 +1,6 @@
 from datetime import datetime
 import os
 import importlib.util
-import tempfile
-import subprocess
 
 import click
 from tqdm import tqdm
@@ -45,6 +43,8 @@ def main(python_file, outdir, name: str, parallelize: bool, gpus: str):
     spec.loader.exec_module(config_module)
 
     configs = config_module.configs
+    for config in configs:
+        config.launch_id = f"{name}-{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}"
 
     use_ray = parallelize and len(configs) > 0
     if use_ray:

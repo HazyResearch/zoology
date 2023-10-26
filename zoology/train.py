@@ -145,7 +145,7 @@ def compute_accuracy(preds: torch.Tensor, targets: torch.Tensor, ignore_index: i
 
 
 def train(config: TrainConfig):
-    logger = WandbLogger(config.logger)
+    logger = WandbLogger(config)
     logger.log_config(config)
     config.print()
 

@@ -70,6 +70,7 @@ for input_seq_len, num_kv_pairs in [
                     model=model,
                     data=data,
                     learning_rate=lr,
-                    max_epochs=64
+                    max_epochs=64,
+                    run_id=f"{sequence_mixer}-seqlen{input_seq_len}-dmodel{d_model}-lr{lr}-kv{num_kv_pairs}"
                 )
                 configs.append(config)

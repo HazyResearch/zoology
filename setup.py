@@ -3,18 +3,24 @@ from setuptools import setup
 
 _REQUIRED = [
     "numpy",
-    "torchmetrics",
     "einops",
     "tqdm",
-    "PyYAML",
     "pydantic",
     "wandb",
 ]
 
-OPTIONAL = [
-    "rich", 
-    "ray"
-]
+_OPTIONAL = {
+    "analysis": [
+        "pandas",
+        "seaborn",
+        "matplotlib",
+    ],
+    "extra":[
+        "rich", 
+        "ray",
+        "PyYAML",
+    ]
+}
 
 # ensure that torch is installed, and send to torch website if not
 try:
@@ -30,6 +36,7 @@ setup(
     author="simran sabri",
     packages=["zoology"],
     install_requires=_REQUIRED,
+    extras_require=_OPTIONAL,
     entry_points={
         'console_scripts': ['zg=zoology.cli:cli'],
     },
