@@ -32,6 +32,8 @@ class Trainer:
         test_dataloader: DataLoader = None,
         max_epochs: int = 100,
         learning_rate: float = 1e-3,
+        early_stopping_metric: str = None,
+        early_stopping_threshold: float = None,
         device: Union[str, int] = "cuda",
         logger: WandbLogger = None,
     ):
@@ -42,6 +44,8 @@ class Trainer:
 
         self.device = device
         self.max_epochs = max_epochs
+        self.early_stopping_metric = early_stopping_metric
+        self.early_stopping_threshold = early_stopping_threshold
         self.learning_rate = learning_rate
 
     def train_epoch(self, epoch_idx: int):
@@ -104,13 +108,9 @@ class Trainer:
             )
 
             # logging and printing
-            iterator.set_postfix({"loss": test_loss.item(), "acc": test_accuracy.item()})
-            self.logger.log(
-                {
-                    "valid/loss": test_loss,
-                    "valid/accuracy": test_accuracy,
-                }
-            )
+            metrics = {"valid/loss": test_loss.item(), "valid/accuracy": test_accuracy.item()}
+            iterator.set_postfix(metrics)
+            self.logger.log(metrics)
 
     def fit(self):
         self.model.to("cuda")
@@ -121,27 +121,20 @@ class Trainer:
         )
         for epoch_idx in range(self.max_epochs):
             self.train_epoch(epoch_idx)
-            self.test(epoch_idx)
+            metrics = self.test(epoch_idx)
+
+            # early stopping
+            if (
+                self.early_stopping_metric is not None and 
+                metrics[self.early_stopping_metric] > self.early_stopping_threshold
+            ):
+                break
+
             self.scheduler.step()
-
-    def run_profile(self):
-        from torch.profiler import profile, record_function, ProfilerActivity
-
-        for batch_idx, (inputs, targets) in enumerate(self.train_dataloader):
-            inputs, targets = inputs.to(self.device), targets.to(self.device)
-            with profile(
-                activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA]
-            ) as prof:
-                self.model(inputs)
-            prof.export_chrome_trace("trace.json")
-            break
-        print("Done!")
 
 
 def compute_accuracy(preds: torch.Tensor, targets: torch.Tensor, ignore_index: int =-100):
     return (preds == targets)[targets != ignore_index].to(float).mean()
-
-
 
 
 def train(config: TrainConfig):

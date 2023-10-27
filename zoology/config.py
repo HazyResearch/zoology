@@ -85,13 +85,11 @@ class ModelConfig(BaseConfig):
     max_position_embeddings: int = 64
     vocab_size: int = 8_192
 
-    # num_heads=12,
     resid_dropout: float = 0.0
     embed_dropout: float = 0.1
     drop_path: float = 0.0
     layer_norm_epsilon: float = 1e-5
     pad_vocab_size_multiple: int = 1
-    # block=None,
 
 class LoggerConfig(BaseConfig):
 
@@ -105,6 +103,13 @@ class TrainConfig(BaseConfig):
 
     
     max_epochs: int = 100
+
+    # stop training once this metric reaches the threshold
+    # set metric to None to disable early stopping
+    early_stopping_metric: str = "valid/accuracy"
+    early_stopping_threshold: float = 0.99
+
+
     learning_rate: float = 1e-3
 
 

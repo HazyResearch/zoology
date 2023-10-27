@@ -17,7 +17,7 @@ class SelfAttention(nn.Module):
             qkv: The tensor containing the query, key, and value. (B, S, 3, H, D)
             causal: if passed, will override self.causal
         """
-        batch_size, seqlen = qkv.shape[0], qkv.shape[1]
+        seqlen = qkv.shape[1]
         q, k, v = qkv.unbind(dim=2)
         softmax_scale = 1.0 / math.sqrt(q.shape[-1])
         scores = torch.einsum("bthd,bshd->bhts", q, k * softmax_scale)

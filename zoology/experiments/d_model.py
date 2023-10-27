@@ -10,15 +10,7 @@ sweep_name = "monarch_attn" + sweep_id
 VOCAB_SIZE = 8_192
 
 
-mixers = {
-    "attention": dict(
-        name="zoology.mixers.attention.MHA",
-        kwargs={
-            "dropout": 0.1,
-            "num_heads": 1
-        },
-    )
-}
+
 
 
 configs = []
@@ -33,7 +25,7 @@ for input_seq_len, num_kv_pairs in [
     elif input_seq_len == 512:
         batch_size = 128
     else:
-        batch_size = 256
+        batch_size = 1024
 
     data = DataConfig(
         num_train_examples=100_000,
@@ -55,15 +47,33 @@ for input_seq_len, num_kv_pairs in [
 
     for d_model in [64, 128, 256, 512]:
         for lr in np.logspace(-4, -2, 4):
+            
+            MIXERS = {
+                "attention": dict(
+                    name="zoology.mixers.attention.MHA",
+                    kwargs={
+                        "dropout": 0.1,
+                        "num_heads": 1
+                    },
+                ),
+                "hyena": dict(
+                    name="zoology.mixers.hyena.Hyena",
+                    kwargs={
+                        "l_max": input_seq_len
+                    },
+                )
+            }
+
             for sequence_mixer in [
-                "attention",
+                # "attention",
+                "hyena"
             ]:
                 model = ModelConfig(
                     d_model=d_model,
                     n_layers=2,
-                    max_position_embeddings=input_seq_len,
+                    max_position_embeddings=input_seq_len if sequence_mixer == "attention" else 0,
                     vocab_size=VOCAB_SIZE,
-                    sequence_mixer=mixers[sequence_mixer],
+                    sequence_mixer=MIXERS[sequence_mixer],
                 )
 
                 config = TrainConfig(
