@@ -10,9 +10,6 @@ sweep_name = "monarch_attn" + sweep_id
 VOCAB_SIZE = 8_192
 
 
-
-
-
 configs = []
 for input_seq_len, num_kv_pairs in [
     (64, 4),
@@ -61,12 +58,20 @@ for input_seq_len, num_kv_pairs in [
                     kwargs={
                         "l_max": input_seq_len
                     },
-                )
+                ),
+                "rwkv": dict(
+                    name="zoology.mixers.rwkv.RWKVTimeMixer",
+                    kwargs={
+                        "l_max": input_seq_len,
+                        "n_layer": 2
+                    },
+                ),
             }
 
             for sequence_mixer in [
                 # "attention",
-                "hyena"
+                # "hyena",
+                "rwkv"
             ]:
                 model = ModelConfig(
                     d_model=d_model,

@@ -123,7 +123,10 @@ class TransformerBlock(nn.Module):
 
     def __init__(self, config: ModelConfig, layer_idx: int):
         super().__init__()
-        self.sequence_mixer = config.sequence_mixer.instantiate(d_model=config.d_model)
+        self.sequence_mixer = config.sequence_mixer.instantiate(
+            d_model=config.d_model,
+            layer_idx=layer_idx,
+        )
         self.state_mixer = MLP(
             config.d_model,
             hidden_features=config.d_model * 4,

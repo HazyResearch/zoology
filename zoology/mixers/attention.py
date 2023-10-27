@@ -32,15 +32,15 @@ class SelfAttention(nn.Module):
 
 
 class MHA(nn.Module):
-    """Multi-head self-attention and cross-attention"""
+    """Multi-head self-attention"""
 
     def __init__(
         self,
-        d_model,
-        num_heads=1,
-        bias=True,
-        dropout=0.0,
-        layer_idx=None,
+        d_model: int,
+        num_heads: int=1,
+        bias: bool=True,
+        dropout: float=0.0,
+        layer_idx: int=None,
     ) -> None:
         super().__init__()
         self.d_model = d_model
@@ -56,7 +56,8 @@ class MHA(nn.Module):
         self.inner_attn = SelfAttention(attention_dropout=dropout)
         self.out_proj = nn.Linear(d_model, d_model)
 
-    def forward(self, x, **kwargs):
+    def forward(self, x: torch.Tensor):
+        """"""
         qkv = self.Wqkv(x)
         qkv = rearrange(
             qkv, "... (three h d) -> ... three h d", three=3, d=self.head_dim

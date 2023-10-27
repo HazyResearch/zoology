@@ -228,6 +228,7 @@ class Hyena(nn.Module):
         short_filter_order=3,
         return_state=False,
         bidirectional: bool=False,
+        layer_idx: int=None,
         **filter_args,
     ):
         r"""
