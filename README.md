@@ -1,13 +1,13 @@
 <div align="center" style="margin-bottom:-40px">
     <img src="banner.png" height=150 alt="Meerkat logo"/> 
 
----
-
-![GitHub Workflow Status](https://github.com/HazyResearch/meerkat/actions/workflows/.github/workflows/ci.yml/badge.svg)
 [![GitHub](https://img.shields.io/github/license/HazyResearch/meerkat)](https://img.shields.io/github/license/HazyResearch/meerkat)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 
 A minimal repo for modeling synthetic languages. 
+
+---
+
 </div>
 
 ## Getting started
