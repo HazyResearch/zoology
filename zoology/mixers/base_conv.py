@@ -243,7 +243,7 @@ class BaseConv(nn.Module):
 
         # prepare convolution
         if kernel_size != -1:
-            self.conv = Filter(d_model, seq_len=l_max, channels=1)
+            self.conv = ImplicitLongConvolution(d_model, l_max=l_max, channels=1)
         else:
             self.conv = ShortConvolution(d_model, kernel_size=kernel_size)
 
