@@ -1,4 +1,4 @@
-<div align="center">
+<div align="center" style="margin-bottom:-40px">
     <img src="banner.png" height=150 alt="Meerkat logo"/> 
 
 ---
