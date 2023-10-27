@@ -21,13 +21,13 @@ pip install -e .
 ```
 We want to keep this install as lightweight as possible; the only required dependencies are: `torch, einops, tqdm, pydantic, wandb`. There is some extra functionality (*e.g.* launching sweeps in parallel with Ray) that require additional dependencies. To install these, run `pip install -e .[extra,analysis]`.
 
-**Running an experiment.** Follow along in this notebook  2 
+**Running an experiment.** Follow along in this notebook to 
 
 ## Data
 
 
 
-## Mixer2 
+## Mixer
 
 
 
