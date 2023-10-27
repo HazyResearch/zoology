@@ -42,7 +42,7 @@ for input_seq_len, num_kv_pairs in [
         }   
     )
 
-    for d_model in [64, 128, 256, 512]:
+    for d_model in [512, 64, 128, 256, 512]:
         for lr in np.logspace(-4, -2, 4):
             
             MIXERS = {
@@ -63,19 +63,25 @@ for input_seq_len, num_kv_pairs in [
                     name="zoology.mixers.rwkv.RWKVTimeMixer",
                     kwargs={
                         "l_max": input_seq_len,
-                        "n_layer": 2
                     },
                 ),
+                "base_conv": dict(
+                    name="zoology.mixers.base_conv.BaseConvOld",
+                    kwargs={
+                        "l_max": input_seq_len,
+                    }
+                )
             }
 
             for sequence_mixer in [
                 # "attention",
                 # "hyena",
-                "rwkv"
+                # "rwkv",
+                "base_conv"
             ]:
                 model = ModelConfig(
                     d_model=d_model,
-                    n_layers=2,
+                    n_layers=4,
                     max_position_embeddings=input_seq_len if sequence_mixer == "attention" else 0,
                     vocab_size=VOCAB_SIZE,
                     sequence_mixer=MIXERS[sequence_mixer],
