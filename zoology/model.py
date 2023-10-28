@@ -94,31 +94,6 @@ def _init_weights(
                     p, mean=0.0, std=initializer_range / math.sqrt(2 * n_layers)
                 )
 
-
-class MLP(nn.Module):
-    def __init__(
-        self,
-        in_features: int,
-        hidden_features: int=None,
-        out_features: int=None,
-        activation: callable=F.gelu,
-        return_residual: bool=False,
-    ):
-        super().__init__()
-        out_features = out_features or in_features
-        hidden_features = hidden_features or in_features
-        self.return_residual = return_residual
-        self.fc1 = nn.Linear(in_features, hidden_features)
-        self.activation = activation
-        self.fc2 = nn.Linear(hidden_features, out_features)
-
-    def forward(self, x):
-        y = self.fc1(x)
-        y = self.activation(y)
-        y = self.fc2(y)
-        return y if not self.return_residual else (y, x)
-
-
 class TransformerBlock(nn.Module):
 
     def __init__(self, config: ModelConfig, layer_idx: int):
@@ -127,11 +102,9 @@ class TransformerBlock(nn.Module):
             d_model=config.d_model,
             layer_idx=layer_idx,
         )
-        self.state_mixer = MLP(
-            config.d_model,
-            hidden_features=config.d_model * 4,
-            out_features=config.d_model,
-            activation=torch.tanh,
+        self.state_mixer = config.sequence_mixer.instantiate(
+            d_model=config.d_model,
+            layer_idx=layer_idx,
         )
         self.dropout1 = nn.Dropout(config.embed_dropout if layer_idx == 0 else config.resid_dropout)
         self.drop_path1 = StochasticDepth(config.drop_path, mode="row")
@@ -160,7 +133,7 @@ class LMBackbone(nn.Module):
         self.embeddings = TokenEmbeddings(
             config.d_model, config.vocab_size, config.max_position_embeddings
         )
-        self.layers =  nn.ModuleList(
+        self.layers = nn.ModuleList(
             [
                 TransformerBlock(config=config, layer_idx=i)
                 for i in range(config.n_layers)

@@ -79,6 +79,10 @@ class DataConfig(BaseConfig):
 
 class ModelConfig(BaseConfig):
     sequence_mixer: ModuleConfig = None
+    state_mixer: ModuleConfig = ModuleConfig(
+        name="zoology.mixers.mlp.MLP", 
+        kwargs={"hidden_mult": 4}
+    )
 
     d_model: int = 128
     n_layers: int = 2

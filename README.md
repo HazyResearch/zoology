@@ -1,14 +1,16 @@
-<div align="center" style="margin-bottom:-40px">
-    <img src="banner.png" height=150 alt="Meerkat logo"/> 
+<div align="center" >
+    <img src="banner.png" height=150 alt="Meerkat logo" style="margin-bottom:px"/> 
 
 [![GitHub](https://img.shields.io/github/license/HazyResearch/meerkat)](https://img.shields.io/github/license/HazyResearch/meerkat)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 
-A minimal repo for modeling synthetic languages. 
+**A minimal repo for modeling synthetic languages.**
 
 ---
 
 </div>
+
+Zoology provides machine learning researchers with a simple playground for testing architectures on synthetic language data. 
 
 ## Getting started
 
@@ -21,15 +23,24 @@ pip install -e .
 ```
 We want to keep this install as lightweight as possible; the only required dependencies are: `torch, einops, tqdm, pydantic, wandb`. There is some extra functionality (*e.g.* launching sweeps in parallel with Ray) that require additional dependencies. To install these, run `pip install -e .[extra,analysis]`.
 
-**Running an experiment.** Follow along in this notebook to 
+**Training your first model.** Follow along in this colab
+
+## Experiments and Sweeps
+In this section, we'll walk through how to configure experiment and launch sweeps. 
 
 ## Data
+In this section, we'll walk through how to create a new synthetic task and discuss some of the tasks that are already implemented.
+
+## Models
+In this section, we'll walk through the proces of implementing a new model architecture. 
+The library 
 
 
 
-## Mixer
 
+## About 
 
+This repo is being developed by members of the HazyResearch group. 
 
 
 

@@ -242,7 +242,7 @@ class BaseConv(nn.Module):
             kernel_size = kernel_size[layer_idx]
 
         # prepare convolution
-        if kernel_size != -1:
+        if kernel_size == -1:
             self.conv = ImplicitLongConvolution(d_model, l_max=l_max, channels=1)
         else:
             self.conv = ShortConvolution(d_model, kernel_size=kernel_size)
@@ -257,4 +257,4 @@ class BaseConv(nn.Module):
         u_conv = self.conv(u)
         u_proj = self.projection(u)
         y = u_conv * u_proj
-        return y
+        return y + u

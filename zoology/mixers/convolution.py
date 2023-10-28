@@ -60,8 +60,8 @@ class PositionalEmbedding(nn.Module):
         f = torch.linspace(1e-4, bands - 1, bands)[None, None]
         z = torch.exp(-1j * f * w)
         z = torch.cat([t, z.real, z.imag], dim=-1)
-        self.z = z
-        self.t = t
+        self.z = nn.Parameter(z, requires_grad=False)
+        self.t = nn.Parameter(t, requires_grad=False)
 
     def forward(self, L):
         return self.z[:, :L], self.t[:, :L]
@@ -82,8 +82,7 @@ class ExponentialModulation(nn.Module):
         self.shift = shift
         max_decay = math.log(target) / fast_decay_pct
         min_decay = math.log(target) / slow_decay_pct
-        deltas = torch.linspace(min_decay, max_decay, d_model)[None, None]
-        self.register("deltas", deltas, lr=modulation_lr)
+        self.deltas = nn.Parameter(torch.linspace(min_decay, max_decay, d_model)[None, None], requires_grad=False)
 
     def forward(self, t, x):
         decay = torch.exp(-t * self.deltas.abs())
@@ -97,6 +96,7 @@ class ShortConvolution(nn.Module):
         d_model: int,
         kernel_size: int
     ): 
+        super().__init__()
         self.conv = nn.Conv1d(
             in_channels=d_model,
             out_channels=d_model,
@@ -175,8 +175,7 @@ class ImplicitLongConvolution(nn.Module):
     def filter(self, l: int, *args, **kwargs):
         z, t = self.pos_emb(l)
         h = self.implicit_filter(z)
-        if self.modulate:
-            h = self.modulation(t, h)
+        h = self.modulation(t, h)
 
         if self.normalized:
             h = h / torch.norm(h, dim=-1, p=1, keepdim=True)

@@ -42,7 +42,7 @@ for input_seq_len, num_kv_pairs in [
         }   
     )
 
-    for d_model in [512, 64, 128, 256, 512]:
+    for d_model in [64, 128, 256, 512]:
         for lr in np.logspace(-4, -2, 4):
             
             MIXERS = {
@@ -66,9 +66,11 @@ for input_seq_len, num_kv_pairs in [
                     },
                 ),
                 "base_conv": dict(
-                    name="zoology.mixers.base_conv.BaseConvOld",
+                    name="zoology.mixers.base_conv.BaseConv",
                     kwargs={
                         "l_max": input_seq_len,
+                        # pass a list of kernel sizes for each of four layers
+                        "kernel_size": [3, -1, 3, -1]
                     }
                 )
             }
@@ -85,6 +87,7 @@ for input_seq_len, num_kv_pairs in [
                     max_position_embeddings=input_seq_len if sequence_mixer == "attention" else 0,
                     vocab_size=VOCAB_SIZE,
                     sequence_mixer=MIXERS[sequence_mixer],
+                    state_mixer=dict(name="torch.nn.Identity", kwargs={})
                 )
 
                 config = TrainConfig(
