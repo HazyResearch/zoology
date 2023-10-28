@@ -29,6 +29,35 @@ def fft_conv(u, k, dropout_mask, gelu=True, k_rev=None):
         return out.to(dtype=u.dtype)
     
 
+class ShortConvolution(nn.Module):
+
+    def __init__(
+        self, 
+        d_model: int,
+        kernel_size: int
+    ): 
+        super().__init__()
+        self.conv = nn.Conv1d(
+            in_channels=d_model,
+            out_channels=d_model,
+            kernel_size=kernel_size,
+            groups=d_model,
+            padding=kernel_size - 1,
+        )
+    
+    def forward(self, x: torch.Tensor):
+        """
+        Args:
+            x: (b, l, d) tensor
+        Returns: 
+            y: (b, l, d) tensor
+        """
+        l = x.size(1)
+        y = self.conv(x.transpose(1, 2))[..., :l].transpose(1, 2)
+        return y 
+
+
+
 class Sin(nn.Module):
     def __init__(self, dim, w=10, train_freq=True):
         super().__init__()
@@ -67,6 +96,43 @@ class PositionalEmbedding(nn.Module):
         return self.z[:, :L], self.t[:, :L]
 
 
+class LongConvolution(nn.Module):
+    def __init__(
+        self,
+        d_model: int,
+        l_max: int,
+        **kwargs,
+    ):
+        """
+        Implicit long filter with modulation.
+
+        Args:
+            d_model: number of channels in the input
+            emb_dim: dimension of the positional encoding (`emb_dim` - 1) // 2 is the number of bands
+            order: width of the FFN
+            num_inner_mlps: number of inner linear layers inside filter MLP
+
+        Note:
+            filter_dropout is not implemented
+        """
+        super().__init__()
+        self.d_model = d_model 
+        self.filter = nn.Parameter(torch.randn(self.d_model, l_max), requires_grad=True)
+
+    def forward(self, x: torch.Tensor, *args, **kwargs):
+        """
+        Args:
+            x: (b, l, d) tensor
+        Returns: 
+            y: (b, l, d) tensor
+        """
+        x = x.transpose(1, 2)
+        y = fft_conv(x, self.filter, dropout_mask=None, gelu=False)
+        y = y.transpose(1, 2)
+        return y.to(dtype=x.dtype)
+
+
+
 class ExponentialModulation(nn.Module):
     def __init__(
         self,
@@ -74,7 +140,6 @@ class ExponentialModulation(nn.Module):
         fast_decay_pct=0.3,
         slow_decay_pct=1.5,
         target=1e-2,
-        modulation_lr=0.0,
         shift: float = 0.0,
         **kwargs,
     ):
@@ -88,34 +153,6 @@ class ExponentialModulation(nn.Module):
         decay = torch.exp(-t * self.deltas.abs())
         x = x * (decay + self.shift)
         return x
-
-class ShortConvolution(nn.Module):
-
-    def __init__(
-        self, 
-        d_model: int,
-        kernel_size: int
-    ): 
-        super().__init__()
-        self.conv = nn.Conv1d(
-            in_channels=d_model,
-            out_channels=d_model,
-            kernel_size=kernel_size,
-            groups=d_model,
-            padding=kernel_size - 1,
-        )
-    
-    def forward(self, x: torch.Tensor):
-        """
-        Args:
-            x: (b, l, d) tensor
-        Returns: 
-            y: (b, l, d) tensor
-        """
-        l = x.size(1)
-        y = self.conv(x.transpose(1, 2))[..., :l].transpose(1, 2)
-        return y 
-
 
 class ImplicitLongConvolution(nn.Module):
     def __init__(
