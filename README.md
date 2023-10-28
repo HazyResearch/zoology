@@ -4,7 +4,7 @@
 [![GitHub](https://img.shields.io/github/license/HazyResearch/meerkat)](https://img.shields.io/github/license/HazyResearch/meerkat)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 
-**A minimal repo for modeling synthetic languages.**
+**A simple repository for modeling synthetic languages.**
 
 ---
 
