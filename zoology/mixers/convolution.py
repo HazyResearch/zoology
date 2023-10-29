@@ -30,6 +30,9 @@ def fft_conv(u, k, dropout_mask, gelu=True, k_rev=None):
     
 
 class ShortConvolution(nn.Module):
+    """
+    Simple wrapper around nn.Conv1d that accepts dimension last. 
+    """
 
     def __init__(
         self, 
@@ -57,23 +60,50 @@ class ShortConvolution(nn.Module):
         return y 
 
 
-
-class Sin(nn.Module):
-    def __init__(self, dim, w=10, train_freq=True):
+class LongConvolution(nn.Module):
+    """
+    LongConvolution applies a convolution operation on the input tensor using a fixed 
+    filter of length l_max.
+    The filter is learned during training and is applied using FFT convolution.
+    Args:
+        d_model (int): The number of expected features in the input and output.
+        l_max (int): The maximum sequence length.
+    Returns:
+        y: (b, l, d) tensor
+    """
+    def __init__(
+        self,
+        d_model: int,
+        l_max: int,
+        **kwargs,
+    ):
+        """
+        Initializes the LongConvolution module.
+        Args:
+            d_model (int): The number of expected features in the input and output.
+            l_max (int): The maximum sequence length.
+        """
         super().__init__()
-        self.freq = (
-            nn.Parameter(w * torch.ones(1, dim))
-            if train_freq
-            else w * torch.ones(1, dim)
-        )
+        self.d_model = d_model 
+        self.filter = nn.Parameter(torch.randn(self.d_model, l_max), requires_grad=True)
 
-    def forward(self, x):
-        return torch.sin(self.freq * x)
+    def forward(self, x: torch.Tensor, *args, **kwargs):
+        """
+        Applies the LongConvolution operation on the input tensor.
+        Args:
+            x: (b, l, d) tensor
+        Returns: 
+            y: (b, l, d) tensor
+        """
+        x = x.transpose(1, 2)
+        y = fft_conv(x, self.filter, dropout_mask=None, gelu=False)
+        y = y.transpose(1, 2)
+        return y.to(dtype=x.dtype)
 
 
 class PositionalEmbedding(nn.Module):
     def __init__(self, emb_dim: int, seq_len: int, **kwargs):
-        """Complex exponential positional embeddings for Hyena filters."""
+        """Complex exponential positional embeddings for implicit long convolution filters."""
         super().__init__()
 
         self.seq_len = seq_len
@@ -90,134 +120,62 @@ class PositionalEmbedding(nn.Module):
         z = torch.exp(-1j * f * w)
         z = torch.cat([t, z.real, z.imag], dim=-1)
         self.z = nn.Parameter(z, requires_grad=False)
-        self.t = nn.Parameter(t, requires_grad=False)
 
     def forward(self, L):
-        return self.z[:, :L], self.t[:, :L]
-
-
-class LongConvolution(nn.Module):
-    def __init__(
-        self,
-        d_model: int,
-        l_max: int,
-        **kwargs,
-    ):
-        """
-        Implicit long filter with modulation.
-
-        Args:
-            d_model: number of channels in the input
-            emb_dim: dimension of the positional encoding (`emb_dim` - 1) // 2 is the number of bands
-            order: width of the FFN
-            num_inner_mlps: number of inner linear layers inside filter MLP
-
-        Note:
-            filter_dropout is not implemented
-        """
-        super().__init__()
-        self.d_model = d_model 
-        self.filter = nn.Parameter(torch.randn(self.d_model, l_max), requires_grad=True)
-
-    def forward(self, x: torch.Tensor, *args, **kwargs):
-        """
-        Args:
-            x: (b, l, d) tensor
-        Returns: 
-            y: (b, l, d) tensor
-        """
-        x = x.transpose(1, 2)
-        y = fft_conv(x, self.filter, dropout_mask=None, gelu=False)
-        y = y.transpose(1, 2)
-        return y.to(dtype=x.dtype)
-
-
-
-class ExponentialModulation(nn.Module):
-    def __init__(
-        self,
-        d_model,
-        fast_decay_pct=0.3,
-        slow_decay_pct=1.5,
-        target=1e-2,
-        shift: float = 0.0,
-        **kwargs,
-    ):
-        super().__init__()
-        self.shift = shift
-        max_decay = math.log(target) / fast_decay_pct
-        min_decay = math.log(target) / slow_decay_pct
-        self.deltas = nn.Parameter(torch.linspace(min_decay, max_decay, d_model)[None, None], requires_grad=False)
-
-    def forward(self, t, x):
-        decay = torch.exp(-t * self.deltas.abs())
-        x = x * (decay + self.shift)
-        return x
+        return self.z[:, :L]
 
 class ImplicitLongConvolution(nn.Module):
+    """
+    Long convolution with implicit filter parameterized by an MLP.
+
+    Args:
+        d_model (int): The number of expected features in the input and output.
+        l_max (int): The maximum sequence length.
+        d_emb (int, optional): The dimension of the positional embeddings. Must be odd and greater or equal to 3 (time, sine and cosine). Defaults to 3.
+        d_hidden (int, optional): The number of features in the hidden layer of the MLP. Defaults to 16.
+
+    Attributes:
+        pos_emb (PositionalEmbedding): The positional embedding layer.
+        mlp (nn.Sequential): The MLP that parameterizes the implicit filter.
+
+    """
+
+    
     def __init__(
         self,
         d_model: int,
         l_max: int,
-        emb_dim: int=3,  # dim of input to MLP, augments with positional encoding
-        order: int=16,  # width of the implicit MLP
-        dropout=0.0,
-        frequency: int=1,  # frequency of periodic activations
-        bias: bool=True,
-        num_inner_mlps: int=2,
-        normalized: bool=False,
+        d_emb: int=3, 
+        d_hidden: int = 16,
         **kwargs,
     ):
         """
-        Implicit long filter with modulation.
+        Long convolution with implicit filter parameterized by an MLP.
 
-        Args:
-            d_model: number of channels in the input
-            emb_dim: dimension of the positional encoding (`emb_dim` - 1) // 2 is the number of bands
-            order: width of the FFN
-            num_inner_mlps: number of inner linear layers inside filter MLP
-
-        Note:
-            filter_dropout is not implemented
+        
         """
         super().__init__()
         self.d_model = d_model 
-        self.emb_dim = emb_dim 
-        self.use_bias = bias
+        self.d_emb = d_emb 
 
-        self.bias = nn.Parameter(torch.randn(self.d_model))
-        self.dropout = nn.Dropout(dropout)
 
-        act = Sin(dim=order, w=frequency)
         assert (
-            emb_dim % 2 != 0 and emb_dim >= 3
-        ), "emb_dim must be odd and greater or equal to 3 (time, sine and cosine)"
-        self.pos_emb = PositionalEmbedding(emb_dim, l_max)
+            d_emb % 2 != 0 and d_emb >= 3
+        ), "d_emb must be odd and greater or equal to 3 (time, sine and cosine)"
+        self.pos_emb = PositionalEmbedding(d_emb, l_max)
 
-        # uses a variable number of inner linear layers
-        self.implicit_filter = [
-            nn.Linear(emb_dim, order),
-            act,
-        ]
-        for i in range(num_inner_mlps):
-            self.implicit_filter.append(nn.Linear(order, order))
-            self.implicit_filter.append(act)
         # final linear layer
-        self.implicit_filter.append(nn.Linear(order, d_model, bias=False))
-        self.implicit_filter = nn.Sequential(*self.implicit_filter)
+        self.mlp = nn.Sequential(
+            nn.Linear(d_emb, d_hidden),
+            torch.nn.ReLU(),
+            nn.Linear(d_hidden, d_model),
+        )
 
-        self.modulation = ExponentialModulation(d_model, **kwargs)
-        self.normalized = normalized
 
     def filter(self, l: int, *args, **kwargs):
-        z, t = self.pos_emb(l)
-        h = self.implicit_filter(z)
-        h = self.modulation(t, h)
+        k = self.mlp(self.pos_emb(l))
 
-        if self.normalized:
-            h = h / torch.norm(h, dim=-1, p=1, keepdim=True)
-
-        return h.transpose(1, 2)
+        return k.transpose(1, 2)
 
     def forward(self, x: torch.Tensor, *args, **kwargs):
         """
@@ -232,4 +190,3 @@ class ImplicitLongConvolution(nn.Module):
 
         y = y.transpose(1, 2)
         return y.to(dtype=x.dtype)
-

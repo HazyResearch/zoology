@@ -79,7 +79,7 @@ for input_seq_len, num_kv_pairs in [
                         "l_max": input_seq_len,
                         # pass a list of kernel sizes for each of four layers
                         "kernel_size": [3, -1, 3, -1],
-                        "implicit_long_conv": False
+                        "implicit_long_conv": True
                     }
                 )
             }
