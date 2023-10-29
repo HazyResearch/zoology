@@ -28,7 +28,7 @@ pip install -e .
 ```
 We want to keep this install as lightweight as possible; the only required dependencies are: `torch, einops, tqdm, pydantic, wandb`. There is some extra functionality (*e.g.* launching sweeps in parallel with Ray) that require additional dependencies. To install these, run `pip install -e .[extra,analysis]`.
 
-**Training your first model.** Follow along in this colab
+**Training your first model.** Follow along in this colab.
 
 ## Experiments and Sweeps
 In this section, we'll walk through how to configure experiment and launch sweeps. 
@@ -53,22 +53,40 @@ config = TrainConfig(
     ),
 )
 ```
-
 Note that the `FunctionConfig` and `ModuleConfig` are special objects that configure partial functions and PyTorch modules, respectively. 
 They both have an `instantiate()` method that will import the function or class passed to `name` and partial or instantiate it with `kwargs`.
 For example, 
-```
+```python
 fn_config = FunctionConfig(name="torch.sort", kwargs={"descending": True})
 fn = fn_config.instantiate()
-fn(torch.tensor([2,4,3]) # [4, 3, 2]
+fn(torch.tensor([2,4,3])) # [4, 3, 2]
 ```
 
-*Launching experiments.* 
+*Launching experiments.* To launch an experiment from the command line, define a configuration object in python file and store it in a global variable `configs`:
+```python
+config = TrainConfig(...)
+configs = [config]
+```
+See [`zoology/experiments/base.py`](zoology/experiments/base.py) for an example. 
 
-*Launching sweeps.*
+Then run `python -m zoology.launch zoology/experiments/base.py`, replacing `base.py` with the path to your experiment. This will launch a single training job. 
 
 
+*Launching sweeps.* To launch a sweep, simply add more configuration objects to the `configs` list. For example, here's the content of [`zoology/experiments/basic_sweep.py`](zoology/experiments/basic_sweep.py):
+```python
+import numpy as np
+from zoology.config import TrainConfig
 
+configs = []
+for lr in np.logspace(-4, -2, 10):
+   configs.append(TrainConfig(learning_rate=lr)) 
+```
+You can then run `python -m zoology.launch zoology/experiments/basic_sweep.py`. This will launch a sweep with 10 jobs, one for each configuration.
+
+*Launching sweeps in parallel.* If you have multiple GPUs on your machine, you can launch sweeps in parallel across your devices. 
+To launch sweeps in parallel, you'll need to install [Ray](https://docs.ray.io/en/latest/ray-overview/installation.html): `pip install -e.[extras]`. 
+Then, you can run `python -m zoology.launch zoology/experiments/basic_sweep.py --parallelize`. 
+This will run the configurations in parallel using a pool of workers, one per GPU.
 
 
 ## Data
