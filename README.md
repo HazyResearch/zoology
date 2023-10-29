@@ -33,6 +33,9 @@ We want to keep this install as lightweight as possible; the only required depen
 ## Experiments and Sweeps
 In this section, we'll walk through how to configure experiment and launch sweeps. 
 
+*Configuration*. Models, data, and training are controlled by a configuration object (similar). The configuration is defined in [`zoology/config.py`](zoology/config.py).
+
+
 ## Data
 In this section, we'll walk through how to create a new synthetic task and discuss some of the tasks that are already implemented.
 
