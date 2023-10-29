@@ -33,7 +33,42 @@ We want to keep this install as lightweight as possible; the only required depen
 ## Experiments and Sweeps
 In this section, we'll walk through how to configure experiment and launch sweeps. 
 
-*Configuration*. Models, data, and training are controlled by a configuration object (similar). The configuration is defined in [`zoology/config.py`](zoology/config.py).
+*Configuration*. Models, data, and training are controlled by configuration objects. For details on available configuration fields, see the configuration definition in [`zoology/config.py`](zoology/config.py). The configuration is a nested Pydantic model, which can be instantiated as follows:
+```python
+from zoology.config import TrainConfig, ModelConfig, DataConfig, ModuleConfig, FunctionConfig
+
+config = TrainConfig(
+    max_epochs=20,
+    data=DataConfig(
+        vocab_size=128,
+        builder=FunctionConfig(
+            name="zoology.data.associative_recall.gap_power_distr_ar",
+            kwargs={"num_kv_pairs": 4}
+        ),
+        
+    ),
+    model=ModelConfig(
+        vocab_size=128,
+        sequence_mixer=ModuleConfig("name": "zoology.mixers.attention.MHA"}
+    ),
+)
+```
+
+Note that the `FunctionConfig` and `ModuleConfig` are special objects that configure partial functions and PyTorch modules, respectively. 
+They both have an `instantiate()` method that will import the function or class passed to `name` and partial or instantiate it with `kwargs`.
+For example, 
+```
+fn_config = FunctionConfig(name="torch.sort", kwargs={"descending": True})
+fn = fn_config.instantiate()
+fn(torch.tensor([2,4,3]) # [4, 3, 2]
+```
+
+*Launching experiments.* 
+
+*Launching sweeps.*
+
+
+
 
 
 ## Data
