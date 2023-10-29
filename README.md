@@ -30,7 +30,7 @@ We want to keep this install as lightweight as possible; the only required depen
 
 **Training your first model.** Follow along in this colab.
 
-## Experiments and Sweeps
+## Configuration, Experiments, and Sweeps
 In this section, we'll walk through how to configure experiment and launch sweeps. 
 
 *Configuration*. Models, data, and training are controlled by configuration objects. For details on available configuration fields, see the configuration definition in [`zoology/config.py`](zoology/config.py). The configuration is a nested Pydantic model, which can be instantiated as follows:
@@ -85,12 +85,67 @@ You can then run `python -m zoology.launch zoology/experiments/basic_sweep.py`. 
 
 *Launching sweeps in parallel.* If you have multiple GPUs on your machine, you can launch sweeps in parallel across your devices. 
 To launch sweeps in parallel, you'll need to install [Ray](https://docs.ray.io/en/latest/ray-overview/installation.html): `pip install -e.[extras]`. 
-Then, you can run `python -m zoology.launch zoology/experiments/basic_sweep.py --parallelize`. 
+Then, you can run `python -m zoology.launch zoology/experiments/basic_sweep.py -p`. 
 This will run the configurations in parallel using a pool of workers, one per GPU.
 
 
 ## Data
 In this section, we'll walk through how to create a new synthetic task and discuss some of the tasks that are already implemented.
+
+*Creating a new task.* To create a new task, you'll need to implement a data builder function with the following signature:
+```python
+from zoology.utils.data import SyntheticData
+def my_data_builder(
+    num_train_examples: int,
+    num_test_examples: int,
+    vocab_size: int,
+    input_seq_len: int,
+    seed: int,
+    **kwargs
+) -> SyntheticData:
+    ...
+```
+You can add any additional arguments to the function signature, but the ones above are required.
+
+The function must return a `SyntheticData` object, which is a simple dataclass with the following fields:
+```python
+@dataclass
+class SyntheticData:
+    """Simple dataclass which specifies the format that should be returned by
+    the synthetic data generators.
+
+    Args:
+        train_inputs (torch.Tensor): Training inputs of shape (num_train_examples, input_seq_len)
+        train_labels (torch.Tensor): Training labels of shape (num_train_examples, input_seq_len)
+        test_inputs (torch.Tensor): Test inputs of shape (num_test_examples, input_seq_len)
+        test_labels (torch.Tensor): Test labels of shape (num_test_examples, input_seq_len)
+    """
+
+    train_inputs: torch.Tensor
+    train_labels: torch.Tensor
+    test_inputs: torch.Tensor
+    test_labels: torch.Tensor
+```
+The inputs and labels should be integer tensors with values in the range `[0, vocab_size)`. 
+
+You can create this function in any file you want, as long as it's importable. Let's
+assume that we've created a file `zoology/data/my_task.py` and written our `my_data_builder` function there.
+Then, we can add it to our data configuration with: 
+```python
+from zoology.config import TrainConfig, DataConfig, FunctionConfig
+config = TrainConfig(
+    DataConfig(
+        vocab_size=128,
+        builder=FunctionConfig(name="zoology.data.my_task.my_data_builder"),
+            kwargs={"my_data_builder_kwarg": 4}
+        ),
+    ),
+)
+```
+When you launch an experiment with this configuration, the `my_data_builder` function will be imported and called with the specified arguments, constructing the dataset. 
+
+**Caching dataset creation.** Sometimes it's useful to cache the dataset creation process, especially if it's expensive. To do so you can pass a `cache_dir` to the `DataConfig`: `DataConfig(..., cache_dir="my_cache_dir")`.
+
 
 ## Models
 In this section, we'll walk through the proces of implementing a new model architecture. 
