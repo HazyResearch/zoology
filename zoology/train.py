@@ -10,7 +10,6 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 import numpy as np
 from einops import rearrange
-from torchmetrics.functional.classification import accuracy
 
 from zoology.data.utils import prepare_data
 from zoology.config import TrainConfig
