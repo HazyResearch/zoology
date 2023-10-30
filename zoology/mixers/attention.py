@@ -32,7 +32,8 @@ class SelfAttention(nn.Module):
 
 
 class MHA(nn.Module):
-    """Multi-head self-attention"""
+    """Multi-head self-attention
+    """
 
     def __init__(
         self,
@@ -62,6 +63,6 @@ class MHA(nn.Module):
         qkv = rearrange(
             qkv, "... (three h d) -> ... three h d", three=3, d=self.head_dim
         )
-        context = self.inner_attn(qkv, **kwargs)
+        context = self.inner_attn(qkv)
         out = self.out_proj(rearrange(context, "... h d -> ... (h d)"))
         return out

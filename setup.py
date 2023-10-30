@@ -5,7 +5,7 @@ _REQUIRED = [
     "numpy",
     "einops",
     "tqdm",
-    "pydantic",
+    "pydantic>=2.0.0",
     "wandb",
 ]
 
