@@ -2,7 +2,44 @@
 import numpy as np
 import torch
 
-from .utils import SyntheticData
+from .utils import SyntheticData, builder_from_single
+
+    
+    
+@builder_from_single
+def base_ar(
+    vocab_size: int,
+    input_seq_len: int,
+    rng: np.random.Generator,
+):
+    """Generate sequence where the input has a sequence of key value pairs
+    and the copy prefix at the end, and then a key value pair is inserted
+    after the copy prefix."""
+    non_special_vocab_size = vocab_size - 1
+    keys = np.arange(non_special_vocab_size // 2)
+    values = np.arange(non_special_vocab_size // 2, non_special_vocab_size)
+    keys = [ [key] for key in keys ]
+    kv_map = {tuple(k): rng.choice(values) for k in keys}
+
+    key_present = {}
+    vocab_seq = []
+    pair_length = 2
+    input_seq_len -= 2
+    for _ in range(input_seq_len // (pair_length)):
+        k = tuple(rng.choice(list(kv_map.keys())))
+        v = kv_map[k]
+        vocab_seq += list(k) + [v]
+        key_present[k] = True
+
+    k = tuple(rng.choice(list(kv_map.keys())))
+    while k not in key_present:
+        k = tuple(rng.choice(list(key_present.keys())))
+    to_copy = [vocab_size - 1] + list(k) + [ kv_map[k]  ]
+    vocab_seq = vocab_seq + to_copy
+    seq = torch.tensor(vocab_seq)
+    return seq[:-1], seq[1:]
+
+
 
 def gap_power_distr_ar(
     vocab_size: int,
@@ -61,7 +98,7 @@ def _gap_power_distr_ar(
     power_a: float=0.01,
     num_kv_pairs: int=8,
     random_non_queries: bool=True
-) -> SyntheticData:
+): #-> SyntheticData:
     """
     """
     assert input_seq_len % 2 == 0, "input_seq_len must be even"

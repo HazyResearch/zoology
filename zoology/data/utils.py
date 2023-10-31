@@ -4,8 +4,10 @@ from pathlib import Path
 import json
 from dataclasses import dataclass, asdict
 from typing import Tuple
+import numpy as np
 
 import torch 
+from tqdm import tqdm
 from torch.utils.data import TensorDataset, DataLoader
 
 from zoology.config import DataConfig
@@ -60,6 +62,35 @@ class SyntheticData:
             raise ValueError(
                 f"test_labels shape is {self.test_labels.shape} but should be {(num_test_examples, input_seq_len)}"
             )
+
+def builder_from_single(single_fn: callable):
+    def _build_from_single(
+        num_train_examples: int,
+        num_test_examples: int,
+        vocab_size: int,
+        input_seq_len: int,
+        seed: int,
+        **kwargs
+    ):
+        result = {}
+        for split, num_examples in [("train", num_train_examples), ("test", num_test_examples)]:
+            # TODO: we probably wanna parallelize this
+            inputs, labels = [], []
+            rng = np.random.default_rng(seed + (0 if split == "train" else 1))
+            for _ in tqdm(range(num_examples)):
+                input, label = single_fn(
+                    vocab_size=vocab_size,
+                    input_seq_len=input_seq_len,
+                    rng=rng,
+                    **kwargs
+                )
+                inputs.append(input)
+                labels.append(label)
+            result[f"{split}_inputs"] = torch.stack(inputs)
+            result[f"{split}_labels"] = torch.stack(labels)
+        return SyntheticData(**result)
+        
+    return _build_from_single
 
 
 def prepare_data(config: DataConfig) -> Tuple[DataLoader]:
