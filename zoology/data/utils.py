@@ -45,9 +45,9 @@ class SyntheticData:
         this is useful to catch bugs in the data generation code because
         downstream errors due to incorrectly shaped can be tricky to debug.
         """
-        if self.train_labels.shape != (num_train_examples, input_seq_len):
+        if self.train_inputs.shape != (num_train_examples, input_seq_len):
             raise ValueError(
-                f"train_labels shape is {self.train_labels.shape} but should be {(num_train_examples, input_seq_len)}"
+                f"train_inputs shape is {self.train_inputs.shape} but should be {(num_train_examples, input_seq_len)}"
             )
 
         if self.train_labels.shape != (num_train_examples, input_seq_len):

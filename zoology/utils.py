@@ -20,3 +20,8 @@ def import_from_str(path) -> Union[type, Callable]:
     except AttributeError as e:
         raise AttributeError(f"Class '{obj_name}' not found in module '{module_name}'.") from e
 
+def set_determinism(seed: int):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
