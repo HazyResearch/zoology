@@ -13,7 +13,7 @@ config = TrainConfig(
             "name": "zoology.data.lego.lego",
             "kwargs": {
                 "n_var": 3,
-                "train_proportions": [0, 1, 0],
+                "train_proportions": [1, 1, 0],
                 "test_proportions": [0, 1, 0]
             }
         },   
