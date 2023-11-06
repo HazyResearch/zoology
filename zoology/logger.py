@@ -9,6 +9,7 @@ class WandbLogger:
     def __init__(self, config: TrainConfig):
         self.run = wandb.init(
             name=config.run_id,
+            entity='hazy-research',
             project=config.logger.project_name, 
         )
         wandb.run.log_code(

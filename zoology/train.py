@@ -10,19 +10,12 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 import numpy as np
 from einops import rearrange
-from torchmetrics.functional.classification import accuracy
 
 from zoology.data.utils import prepare_data
 from zoology.config import TrainConfig
 from zoology.model import LanguageModel
 from zoology.logger import WandbLogger
-
-
-def set_determinism(args):
-    random.seed(args.seed)
-    np.random.seed(args.seed)
-    torch.manual_seed(args.seed)
-    torch.cuda.manual_seed(args.seed)
+from zoology.utils import set_determinism 
 
 class Trainer:
     def __init__(
@@ -115,7 +108,7 @@ class Trainer:
     def fit(self):
         self.model.to("cuda")
         self.loss_fn = nn.CrossEntropyLoss()
-        self.optimizer = optim.AdamW(self.model.parameters(), lr=self.learning_rate)
+        self.optimizer = optim.AdamW(self.model.parameters(), lr=self.learning_rate, weight_decay=0.01)
         self.scheduler = optim.lr_scheduler.CosineAnnealingLR(
             self.optimizer, T_max=self.max_epochs, eta_min=0.0
         )
@@ -138,6 +131,8 @@ def compute_accuracy(preds: torch.Tensor, targets: torch.Tensor, ignore_index: i
 
 
 def train(config: TrainConfig):
+    # TODO (SE): need to actaully verify reproducibility here 
+    set_determinism(config.seed)
     logger = WandbLogger(config)
     logger.log_config(config)
     config.print()

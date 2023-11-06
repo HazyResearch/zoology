@@ -3,8 +3,8 @@ from zoology.config import TrainConfig, ModelConfig, DataConfig
 
 
 config = TrainConfig(
-    data=DataConfig(
-        cache_dir="/var/cr05_data/sabri_data/zg-synthetics",
+    data=[DataConfig(
+        cache_dir="/dfs/scratch0/mfchen/.cache",
         vocab_size=128,
         builder={
             "name": "zoology.data.associative_recall.gap_power_distr_ar",
@@ -13,7 +13,8 @@ config = TrainConfig(
             }
         },
         
-    ),
+    )
+    ],
     model=dict(
         vocab_size=128,
         sequence_mixer={

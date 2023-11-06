@@ -1,6 +1,7 @@
 import argparse
 from datetime import datetime
 from functools import partial
+from typing import List
 
 from pydantic import BaseModel
 
@@ -101,7 +102,7 @@ class LoggerConfig(BaseConfig):
     
 
 class TrainConfig(BaseConfig):
-    data: DataConfig = DataConfig()
+    data: List[DataConfig] = [DataConfig()]
     model: ModelConfig = ModelConfig()
     logger: LoggerConfig = LoggerConfig()
 
