@@ -106,7 +106,6 @@ class TrainConfig(BaseConfig):
     model: ModelConfig = ModelConfig()
     logger: LoggerConfig = LoggerConfig()
 
-    
     max_epochs: int = 100
 
     # stop training once this metric reaches the threshold
@@ -116,6 +115,7 @@ class TrainConfig(BaseConfig):
 
 
     learning_rate: float = 1e-3
+    seed: int = 123
 
 
     launch_id: str = None

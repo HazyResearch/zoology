@@ -81,6 +81,12 @@ for input_seq_len, num_kv_pairs in [
                         "kernel_size": [3, -1, 3, -1],
                         "implicit_long_conv": True
                     }
+                ),
+                "h3": dict(
+                    name="zoology.mixers.h3.H3",
+                    kwargs={
+                        "l_max": input_seq_len,
+                    }
                 )
             }
 
@@ -89,7 +95,8 @@ for input_seq_len, num_kv_pairs in [
                 # "hyena",
                 # "rwkv",
                 # "base_conv"
-                "base_conv_explicit"
+                # "base_conv_explicit",
+                "h3"
             ]:
                 model = ModelConfig(
                     d_model=d_model,
@@ -99,10 +106,9 @@ for input_seq_len, num_kv_pairs in [
                     sequence_mixer=MIXERS[sequence_mixer],
                     state_mixer=dict(name="torch.nn.Identity", kwargs={})
                 )
-
                 config = TrainConfig(
                     model=model,
-                    data=data,
+                    data=[data],
                     learning_rate=lr,
                     max_epochs=64,
                     run_id=f"{sequence_mixer}-seqlen{input_seq_len}-dmodel{d_model}-lr{lr}-kv{num_kv_pairs}"
