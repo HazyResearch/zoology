@@ -24,8 +24,8 @@ class H3(nn.Module):
             dropout=0.0,   # Just to absorb the kwarg
             layer_idx=None,
             device=None, dtype=None,
-            # SSM Kernel arguments
-            **kernel_args,
+            kernel_args: dict={},
+            **kwargs
         ):
         """
         d_state: the dimension of the state, also denoted by N
@@ -65,12 +65,13 @@ class H3(nn.Module):
         # Don't use FusedDense since the layout is H first
         self.output_linear = nn.Linear(self.d_model, self.d_model)
 
-    def forward(self, u, inference_params=None):
+    def forward(self, u, inference_params=None, *args, **kwargs):
         """
         u: (B L H)
 
         Returns: same shape as u
         """
+        # need to convert to torch float 32 for the ssm 
         L_og = u.size(-2)
         if self.use_fast_fftconv and L_og % 2 != 0:
             u = F.pad(u, (0, 0, 0, 1))
@@ -114,6 +115,7 @@ class H3(nn.Module):
         k_og = k
         ssm_k_kernel, _ = self.ssm_k_kernel(L=L_kernel, state=state_k, rate=1.0) # (C H L) (B C H L)
         ssm_k_kernel = rearrange(ssm_k_kernel, '1 h l -> h l')
+
         if not use_fast_fftconv:
             fft_size = L_kernel + L
             ssm_k_kernel_f = torch.fft.rfft(ssm_k_kernel, n=fft_size) # (H 2L)

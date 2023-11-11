@@ -28,7 +28,9 @@ except ImportError:
 
 
 _c2r = torch.view_as_real
-_r2c = torch.view_as_complex
+def _r2c(x):
+    y = torch.view_as_complex(x.to(dtype=torch.float32))
+    return y
 
 if tuple(map(int, torch.__version__.split('.')[:2])) >= (1, 10):
     _resolve_conj = lambda x: x.conj().resolve_conj()

@@ -42,8 +42,13 @@ for input_seq_len, num_kv_pairs in [
         }   
     )
 
-    for d_model in [64, 128, 256, 512]:
-        for lr in np.logspace(-4, -2, 4):
+    for d_model in [
+        64, 
+        128, 
+        256, 
+        512
+    ]:
+        for lr in  np.logspace(-3.3, -2, 4): #np.logspace(-4, -2, 4):
             
             MIXERS = {
                 "attention": dict(
@@ -86,6 +91,7 @@ for input_seq_len, num_kv_pairs in [
                     name="zoology.mixers.h3.H3",
                     kwargs={
                         "l_max": input_seq_len,
+                        "d_state": input_seq_len  # makes it mathematically equivalent to Hyena
                     }
                 )
             }
@@ -100,7 +106,7 @@ for input_seq_len, num_kv_pairs in [
             ]:
                 model = ModelConfig(
                     d_model=d_model,
-                    n_layers=4,
+                    n_layers=2,
                     max_position_embeddings=input_seq_len if sequence_mixer == "attention" else 0,
                     vocab_size=VOCAB_SIZE,
                     sequence_mixer=MIXERS[sequence_mixer],

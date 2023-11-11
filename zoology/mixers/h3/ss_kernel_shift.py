@@ -44,8 +44,8 @@ class SSKernelShift(OptimModule):
         if state is not None:
             B = rearrange(torch.cat([rearrange(B, 'h n -> 1 h n'), state], dim=-3),
                           'bp1 h n -> bp1 1 h n')  # (1 + B, 1, H, N)
-        B_f = torch.fft.rfft(B, n=2*self.N)
-        C_f = torch.fft.rfft(self.C, n=2*self.N)
+        B_f = torch.fft.rfft(B.to(torch.float32), n=2*self.N)
+        C_f = torch.fft.rfft(self.C.to(torch.float32), n=2*self.N)
         k = torch.fft.irfft(B_f.conj() * C_f, n=2*self.N)[..., :min(self.N, L)]
         # If self.N < L, need to pad with zeros to reach length L
         if self.N < L:

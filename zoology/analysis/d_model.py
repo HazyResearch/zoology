@@ -8,14 +8,6 @@ import matplotlib.pyplot as plt
 
 from zoology.analysis.utils import fetch_wandb_runs
 
-MIXER_TO_MODEL = {
-    "zoology.modules.mha.MHA": "Attention",
-    "hyena-simple": "Hyena",
-    "coyote-sequential": "BaseConv",
-}
-MODEL_TO_MODEL = {
-    "rwkv_v4": "RWKV-v4",
-}
 
 
 
