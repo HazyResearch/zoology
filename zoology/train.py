@@ -65,7 +65,7 @@ class Trainer:
 
             # logging and printing
             iterator.set_postfix({"loss": loss.item()})
-            self.logger.log({"train/loss": loss})
+            self.logger.log({"train/loss": loss, "epoch": epoch_idx})
 
     def test(self, epoch_idx: int):
         self.model.eval()
@@ -103,7 +103,11 @@ class Trainer:
             # logging and printing
             metrics = {"valid/loss": test_loss.item(), "valid/accuracy": test_accuracy.item()}
             iterator.set_postfix(metrics)
-            self.logger.log(metrics)
+            self.logger.log({
+                "epoch": epoch_idx,
+                **metrics
+            }
+            )
 
     def fit(self):
         self.model.to("cuda")

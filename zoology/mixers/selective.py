@@ -97,6 +97,72 @@ class SelectiveLookups(nn.Module):
         return y
 
 
+class SigmoidLookups(nn.Module):
+    """"""
+
+    def __init__(
+        self,
+        d_model: int,
+        num_heads: int = 1,
+        bias: bool = True,
+        dropout: float = 0.0,
+        layer_idx: int = None,
+    ) -> None:
+        super().__init__()
+        self.d_model = d_model
+        self.layer_idx = layer_idx
+        self.num_heads = num_heads
+        assert self.d_model % num_heads == 0, "self.kdim must be divisible by num_heads"
+        self.head_dim = self.d_model // num_heads
+        self.Wqkv = nn.Linear(d_model, 3 * d_model, bias=bias)
+        self.selecting = nn.Linear(d_model, 1)
+        self.inner_attn = SelfAttention(attention_dropout=dropout)
+        self.out_proj = nn.Linear(d_model, d_model)
+
+    def forward(self, x: torch.Tensor):
+        """"""
+        qkv = self.Wqkv(x)
+        qkv = rearrange(
+            qkv, "... (three h d) -> ... three h d", three=3, d=self.head_dim
+        )
+        context = self.inner_attn(qkv)
+        attn_output = self.out_proj(rearrange(context, "... h d -> ... (h d)"))
+        
+        selection = torch.sigmoid(self.selecting(x) )
+
+        # selection = self.selecting(x)
+        # selection = (selection / selection.sum(dim = 1, keepdim=True)) * math.sqrt(x.shape[-1])
+
+        if wandb.run.step % 100 == 0:
+            wandb.log(
+                {
+                    "selection/mean": selection.mean(),
+                    "selection/std": selection.std(),
+                    "selection/max": selection.max(),
+                    "selection/significant": (selection > 0.01).float().mean(),
+                    "selection/hist": wandb.Histogram(
+                        np_histogram=np.histogram(
+                            selection[0].squeeze().detach().cpu().numpy(), bins=20
+                        )
+                    ),
+                },
+                commit=False,
+            )
+
+        if self.training:
+            y = attn_output * selection + x 
+            
+            y = y + torch.randn_like(x) * (torch.rand(1).to(device=x.device) > 0.8).float() * 10*  selection
+        else:
+            _, l, d = x.shape
+            k = math.ceil(math.sqrt(l))
+            out = torch.topk(selection, k=k, dim=1, sorted=False)
+            src = torch.gather(attn_output * selection, dim=1, index=out.indices.repeat(1, 1, d))
+            y = x.scatter_add_(dim=1, index=out.indices.repeat(1, 1, d), src=src)
+
+        return y
+
+
 
 
 class SMA(nn.Module):
@@ -146,7 +212,7 @@ class SMA(nn.Module):
                     "selection/mean": selection.mean(),
                     "selection/std": selection.std(),
                     "selection/max": selection.max(),
-                    "selection/temperature": self.temperature,
+                    "selection/temperature": self.temperature.item(),
                     "selection/significant": (selection > 0.01).float().mean(),
                     "selection/hist": wandb.Histogram(
                         np_histogram=np.histogram(

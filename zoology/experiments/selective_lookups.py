@@ -73,6 +73,13 @@ for input_seq_len, num_kv_pairs in [
                         "alpha": 0.3
                     },
                 ),
+                "sigmoid": dict(
+                    name="zoology.mixers.selective.SigmoidLookups",
+                    kwargs={
+                        "dropout": 0.1,
+                        "num_heads": 1,
+                    },
+                ),
             }
 
             for sequence_mixer in [
@@ -81,8 +88,9 @@ for input_seq_len, num_kv_pairs in [
                 # "rwkv",
                 # "base_conv"
                 # "base_conv_explicit",
-                # "selective"
-                "sma"
+                # "selective",
+                # "sma"
+                "sigmoid"
             ]:
                 model = ModelConfig(
                     d_model=d_model,
