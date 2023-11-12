@@ -12,17 +12,15 @@ VOCAB_SIZE = 8_192
 
 configs = []
 for input_seq_len, num_kv_pairs in [
-    # (64, 4),
+    (64, 4),
     (128, 8),
-    (256, 16),
-    (512, 64),
+    # (256, 16),
+    # (512, 64),
 ]:
     if input_seq_len == 1024:
         batch_size = 64
     elif input_seq_len == 512:
         batch_size = 128
-    elif input_seq_len == 256:
-        batch_size = 256
     else:
         batch_size = 1024
 
@@ -46,11 +44,11 @@ for input_seq_len, num_kv_pairs in [
 
     for d_model in [
         64, 
-        128, 
-        256, 
-        512
+        # 128, 
+        # 256, 
+        # 512
     ]:
-        for lr in  np.logspace(-3.3, -2, 4): #np.logspace(-4, -2, 4):
+        for lr in [1e-3]: # np.logspace(-3.3, -2, 4): #np.logspace(-4, -2, 4):
             
             MIXERS = {
                 "attention": dict(
@@ -60,43 +58,13 @@ for input_seq_len, num_kv_pairs in [
                         "num_heads": 1
                     },
                 ),
-                "hyena": dict(
-                    name="zoology.mixers.hyena.Hyena",
+                "selective": dict(
+                    name="zoology.mixers.selective.SelectiveLookups",
                     kwargs={
-                        "l_max": input_seq_len
+                        "dropout": 0.1,
+                        "num_heads": 1
                     },
                 ),
-                "rwkv": dict(
-                    name="zoology.mixers.rwkv.RWKVTimeMixer",
-                    kwargs={
-                        "l_max": input_seq_len,
-                    },
-                ),
-                "base_conv": dict(
-                    name="zoology.mixers.base_conv.BaseConv",
-                    kwargs={
-                        "l_max": input_seq_len,
-                        # pass a list of kernel sizes for each of four layers
-                        "kernel_size": [3, -1, 3, -1]
-                    }
-                ),
-                "base_conv_explicit": dict(
-                    name="zoology.mixers.base_conv.BaseConv",
-                    kwargs={
-                        "l_max": input_seq_len,
-                        # pass a list of kernel sizes for each of four layers
-                        "kernel_size": [3, -1, 3, -1],
-                        "implicit_long_conv": True
-                    }
-                ),
-                "h3": dict(
-                    name="zoology.mixers.h3.H3",
-                    kwargs={
-                        "l_max": input_seq_len,
-                        "d_state": input_seq_len,  # makes it mathematically equivalent to Hyena
-                        "head_dim": 2
-                    }
-                )
             }
 
             for sequence_mixer in [
@@ -105,12 +73,12 @@ for input_seq_len, num_kv_pairs in [
                 # "rwkv",
                 # "base_conv"
                 # "base_conv_explicit",
-                "h3"
+                "selective"
             ]:
                 model = ModelConfig(
                     d_model=d_model,
                     n_layers=2,
-                    max_position_embeddings=input_seq_len if sequence_mixer == "attention" else 0,
+                    max_position_embeddings=input_seq_len,
                     vocab_size=VOCAB_SIZE,
                     sequence_mixer=MIXERS[sequence_mixer],
                     state_mixer=dict(name="torch.nn.Identity", kwargs={})
