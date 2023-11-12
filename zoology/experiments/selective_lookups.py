@@ -14,8 +14,8 @@ configs = []
 for input_seq_len, num_kv_pairs in [
     (64, 4),
     (128, 8),
-    # (256, 16),
-    # (512, 64),
+    (256, 16),
+    (512, 64),
 ]:
     if input_seq_len == 1024:
         batch_size = 64
@@ -65,6 +65,14 @@ for input_seq_len, num_kv_pairs in [
                         "num_heads": 1
                     },
                 ),
+                "sma": dict(
+                    name="zoology.mixers.selective.SMA",
+                    kwargs={
+                        "dropout": 0.1,
+                        "num_heads": 1,
+                        "alpha": 0.3
+                    },
+                ),
             }
 
             for sequence_mixer in [
@@ -73,7 +81,8 @@ for input_seq_len, num_kv_pairs in [
                 # "rwkv",
                 # "base_conv"
                 # "base_conv_explicit",
-                "selective"
+                # "selective"
+                "sma"
             ]:
                 model = ModelConfig(
                     d_model=d_model,
