@@ -115,6 +115,7 @@ class TrainConfig(BaseConfig):
 
 
     learning_rate: float = 1e-3
+    weight_decay: float = 0.1
     seed: int = 123
 
 

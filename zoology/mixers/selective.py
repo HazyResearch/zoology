@@ -107,6 +107,7 @@ class SigmoidLookups(nn.Module):
         bias: bool = True,
         dropout: float = 0.0,
         layer_idx: int = None,
+        selection_penalty: float = 0.001
     ) -> None:
         super().__init__()
         self.d_model = d_model
@@ -115,9 +116,12 @@ class SigmoidLookups(nn.Module):
         assert self.d_model % num_heads == 0, "self.kdim must be divisible by num_heads"
         self.head_dim = self.d_model // num_heads
         self.Wqkv = nn.Linear(d_model, 3 * d_model, bias=bias)
-        self.selecting = nn.Linear(d_model, 1)
+        self.selecting = nn.Linear(d_model, 1, bias=False)
         self.inner_attn = SelfAttention(attention_dropout=dropout)
         self.out_proj = nn.Linear(d_model, d_model)
+        self.selection_penalty = selection_penalty
+
+        self._auxiliary_loss = 0.0
 
     def forward(self, x: torch.Tensor):
         """"""
@@ -145,14 +149,16 @@ class SigmoidLookups(nn.Module):
                             selection[0].squeeze().detach().cpu().numpy(), bins=20
                         )
                     ),
+                    "selection/weight": self.selecting.weight.data.squeeze(),
                 },
                 commit=False,
             )
 
         if self.training:
             y = attn_output * selection + x 
-            
-            y = y + torch.randn_like(x) * (torch.rand(1).to(device=x.device) > 0.8).float() * 10*  selection
+            self._auxiliary_loss = selection.mean() * self.selection_penalty
+
+            y = y #+ torch.randn_like(x) * (torch.rand(1).to(device=x.device) > 0.8).float() * 1 *  selection
         else:
             _, l, d = x.shape
             k = math.ceil(math.sqrt(l))
@@ -160,8 +166,13 @@ class SigmoidLookups(nn.Module):
             src = torch.gather(attn_output * selection, dim=1, index=out.indices.repeat(1, 1, d))
             y = x.scatter_add_(dim=1, index=out.indices.repeat(1, 1, d), src=src)
 
+
         return y
 
+    def get_auxiliary_loss(self):
+        loss = self._auxiliary_loss
+        self._auxiliary_loss = 0.0
+        return loss
 
 
 

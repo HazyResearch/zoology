@@ -12,10 +12,10 @@ VOCAB_SIZE = 8_192
 
 configs = []
 for input_seq_len, num_kv_pairs in [
-    (64, 4),
+    # (64, 4),
     (128, 8),
-    (256, 16),
-    (512, 64),
+    # (256, 16),
+    # (512, 64),
 ]:
     if input_seq_len == 1024:
         batch_size = 64
@@ -48,63 +48,65 @@ for input_seq_len, num_kv_pairs in [
         # 256, 
         # 512
     ]:
-        for lr in [1e-3]: # np.logspace(-3.3, -2, 4): #np.logspace(-4, -2, 4):
-            
-            MIXERS = {
-                "attention": dict(
-                    name="zoology.mixers.attention.MHA",
-                    kwargs={
-                        "dropout": 0.1,
-                        "num_heads": 1
-                    },
-                ),
-                "selective": dict(
-                    name="zoology.mixers.selective.SelectiveLookups",
-                    kwargs={
-                        "dropout": 0.1,
-                        "num_heads": 1
-                    },
-                ),
-                "sma": dict(
-                    name="zoology.mixers.selective.SMA",
-                    kwargs={
-                        "dropout": 0.1,
-                        "num_heads": 1,
-                        "alpha": 0.3
-                    },
-                ),
-                "sigmoid": dict(
-                    name="zoology.mixers.selective.SigmoidLookups",
-                    kwargs={
-                        "dropout": 0.1,
-                        "num_heads": 1,
-                    },
-                ),
-            }
+        for lr in [2e-3]: #np.logspace(-4, -2, 4):
+            for penalty in [1e-5, 1e-4, 1e-3, 1e-2]:
+                
+                MIXERS = {
+                    "attention": dict(
+                        name="zoology.mixers.attention.MHA",
+                        kwargs={
+                            "dropout": 0.1,
+                            "num_heads": 1
+                        },
+                    ),
+                    "selective": dict(
+                        name="zoology.mixers.selective.SelectiveLookups",
+                        kwargs={
+                            "dropout": 0.1,
+                            "num_heads": 1
+                        },
+                    ),
+                    "sma": dict(
+                        name="zoology.mixers.selective.SMA",
+                        kwargs={
+                            "dropout": 0.1,
+                            "num_heads": 1,
+                            "alpha": 0.3
+                        },
+                    ),
+                    "sigmoid": dict(
+                        name="zoology.mixers.selective.SigmoidLookups",
+                        kwargs={
+                            "dropout": 0.1,
+                            "num_heads": 1,
+                            "selection_penalty": penalty
+                        },
+                    ),
+                }
 
-            for sequence_mixer in [
-                # "attention",
-                # "hyena",
-                # "rwkv",
-                # "base_conv"
-                # "base_conv_explicit",
-                # "selective",
-                # "sma"
-                "sigmoid"
-            ]:
-                model = ModelConfig(
-                    d_model=d_model,
-                    n_layers=2,
-                    max_position_embeddings=input_seq_len,
-                    vocab_size=VOCAB_SIZE,
-                    sequence_mixer=MIXERS[sequence_mixer],
-                    state_mixer=dict(name="torch.nn.Identity", kwargs={})
-                )
-                config = TrainConfig(
-                    model=model,
-                    data=[data],
-                    learning_rate=lr,
-                    max_epochs=64,
-                    run_id=f"{sequence_mixer}-seqlen{input_seq_len}-dmodel{d_model}-lr{lr}-kv{num_kv_pairs}"
-                )
-                configs.append(config)
+                for sequence_mixer in [
+                    # "attention",
+                    # "hyena",
+                    # "rwkv",
+                    # "base_conv"
+                    # "base_conv_explicit",
+                    # "selective",
+                    # "sma"
+                    "sigmoid"
+                ]:
+                    model = ModelConfig(
+                        d_model=d_model,
+                        n_layers=2,
+                        max_position_embeddings=input_seq_len,
+                        vocab_size=VOCAB_SIZE,
+                        sequence_mixer=MIXERS[sequence_mixer],
+                        state_mixer=dict(name="torch.nn.Identity", kwargs={})
+                    )
+                    config = TrainConfig(
+                        model=model,
+                        data=[data],
+                        learning_rate=lr,
+                        max_epochs=64,
+                        run_id=f"{sequence_mixer}-seqlen{input_seq_len}-dmodel{d_model}-lr{lr}-kv{num_kv_pairs}"
+                    )
+                    configs.append(config)

@@ -25,6 +25,7 @@ class Trainer:
         test_dataloader: DataLoader = None,
         max_epochs: int = 100,
         learning_rate: float = 1e-3,
+        weight_decay: float = 0.1,
         early_stopping_metric: str = None,
         early_stopping_threshold: float = None,
         device: Union[str, int] = "cuda",
@@ -40,6 +41,7 @@ class Trainer:
         self.early_stopping_metric = early_stopping_metric
         self.early_stopping_threshold = early_stopping_threshold
         self.learning_rate = learning_rate
+        self.weight_decay = weight_decay
 
     def train_epoch(self, epoch_idx: int):
         self.model.train()
@@ -56,16 +58,30 @@ class Trainer:
             # forward
             logits = self.model(inputs)
 
+            # collect auxiliary losses
+            auxiliary_loss = []
+            def get_auxiliary_loss(module):
+                if hasattr(module, "get_auxiliary_loss"):
+                    auxiliary_loss.append(module.get_auxiliary_loss())
+            self.model.apply(get_auxiliary_loss)
+            auxiliary_loss = sum(auxiliary_loss)
+
             # need to flatten batch and sequence dimensions
-            loss = self.loss_fn(
+            main_loss = self.loss_fn(
                 rearrange(logits, "... c -> (...) c"), targets.flatten()
             )
+            loss = main_loss + auxiliary_loss
             loss.backward()
             self.optimizer.step()
 
             # logging and printing
             iterator.set_postfix({"loss": loss.item()})
-            self.logger.log({"train/loss": loss, "epoch": epoch_idx})
+            self.logger.log({
+                "train/loss": loss, 
+                "train/main_loss": main_loss, 
+                "train/auxiliar_loss": auxiliary_loss, 
+                "epoch": epoch_idx
+            })
 
     def test(self, epoch_idx: int):
         self.model.eval()
@@ -112,7 +128,11 @@ class Trainer:
     def fit(self):
         self.model.to("cuda")
         self.loss_fn = nn.CrossEntropyLoss()
-        self.optimizer = optim.AdamW(self.model.parameters(), lr=self.learning_rate, weight_decay=0.01)
+        self.optimizer = optim.AdamW(
+            self.model.parameters(), 
+            lr=self.learning_rate, 
+            weight_decay=self.weight_decay
+        )
         self.scheduler = optim.lr_scheduler.CosineAnnealingLR(
             self.optimizer, T_max=self.max_epochs, eta_min=0.0
         )
@@ -151,10 +171,13 @@ def train(config: TrainConfig):
         test_dataloader=test_dataloader,
         max_epochs=config.max_epochs,
         learning_rate=config.learning_rate,
+        weight_decay=config.weight_decay,
         device="cuda" if torch.cuda.is_available() else "cpu",
         logger=logger,
     )
     task.fit()
+    logger.finish()
+    
 
 
 if __name__ == "__main__":

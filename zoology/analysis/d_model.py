@@ -53,13 +53,19 @@ def plot(
 
 
 if __name__ == "__main__" :
-
     df = fetch_wandb_runs(
-        launch_id=["default-2023-10-25-22-20-38"], project_name="zoology"
+        launch_id=[
+            "default-2023-10-25-22-20-38", 
+            "default-2023-10-26-19-09-31",
+            "default-2023-10-27-04-13-56",
+            "default-2023-10-29-17-31-26",
+            "default-2023-11-12-00-31-44",
+            "default-2023-11-13-00-31-15",
+            "default-2023-11-13-00-42-27"
+        ], 
+        project_name="zoology"
     )
 
-    path = plot(
-        df=df,
-        max_seq_len=1024,
-    )
-    print(path)
+    df["data.input_seq_len"] = df["data.input_seq_len"].fillna(df["data.0.input_seq_len"])
+    plot(df=df, max_seq_len=1024)
+    plt.savefig("results.pdf")
