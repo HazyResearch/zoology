@@ -18,6 +18,7 @@ class TokenEmbeddings(nn.Module):
         max_position_embeddings,
         padding_idx=None,
         word_embed_proj_dim=None,
+        learnable: bool = True,
         device='cuda',
         dtype='torch.float32',
     ):
@@ -43,6 +44,9 @@ class TokenEmbeddings(nn.Module):
             self.project_in = nn.Linear(
                 word_embed_proj_dim, embed_dim, bias=False
             )
+        if not learnable:
+            self.word_embeddings.weight.requires_grad = False
+
         self.max_position_embeddings = max_position_embeddings
         if self.max_position_embeddings > 0:
             self.position_embeddings = nn.Embedding(
@@ -102,7 +106,7 @@ class TransformerBlock(nn.Module):
             d_model=config.d_model,
             layer_idx=layer_idx,
         )
-        self.state_mixer = config.sequence_mixer.instantiate(
+        self.state_mixer = config.state_mixer.instantiate(
             d_model=config.d_model,
             layer_idx=layer_idx,
         )
@@ -131,7 +135,10 @@ class LMBackbone(nn.Module):
 
         super().__init__()
         self.embeddings = TokenEmbeddings(
-            config.d_model, config.vocab_size, config.max_position_embeddings
+            config.d_model, 
+            config.vocab_size, 
+            config.max_position_embeddings,
+            learnable=config.learnable_word_embeddings
         )
         self.layers = nn.ModuleList(
             [

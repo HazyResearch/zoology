@@ -27,7 +27,7 @@ def plot(
     g = sns.relplot(
         data=plot_df[plot_df["data.input_seq_len"] <= max_seq_len],
         y="valid/accuracy",
-        col="data.input_seq_len",
+        col="data.builder.kwargs.n_subjects",
         x="model.d_model",
         hue="model.sequence_mixer.name",
         kind="line",

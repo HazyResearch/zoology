@@ -88,6 +88,7 @@ class ModelConfig(BaseConfig):
     d_model: int = 128
     n_layers: int = 2
     max_position_embeddings: int = 64
+    learnable_word_embeddings: bool = True
     vocab_size: int = 8_192
 
     resid_dropout: float = 0.0
@@ -120,6 +121,7 @@ class TrainConfig(BaseConfig):
 
 
     launch_id: str = None
+    sweep_id: str = None
     run_id: str = "default"
 
 

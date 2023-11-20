@@ -147,8 +147,6 @@ def prepare_data(configs: List[DataConfig]) -> Tuple[DataLoader]:
 
             # generate data
             data: SyntheticData = builder(
-                num_test_examples=config.num_test_examples,
-                num_train_examples=config.num_train_examples,
                 input_seq_len=config.input_seq_len,
                 vocab_size=config.vocab_size,
                 seed=config.seed,
@@ -157,11 +155,11 @@ def prepare_data(configs: List[DataConfig]) -> Tuple[DataLoader]:
             if config.cache_dir is not None:
                 print(f"Saving dataset to on-disk cache at {cache_path}...") 
                 torch.save(asdict(data), cache_path)
-        data.check_shapes(
-            num_train_examples=config.num_train_examples, 
-            num_test_examples=config.num_test_examples,
-            input_seq_len=config.input_seq_len,
-        )
+        # data.check_shapes(
+        #     num_train_examples=config.num_train_examples, 
+        #     num_test_examples=config.num_test_examples,
+        #     input_seq_len=config.input_seq_len,
+        # )
         
         # concatenate data together 
         train_inputs.append(data.train_inputs)

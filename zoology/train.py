@@ -15,7 +15,8 @@ from zoology.data.utils import prepare_data
 from zoology.config import TrainConfig
 from zoology.model import LanguageModel
 from zoology.logger import WandbLogger
-from zoology.utils import set_determinism 
+from zoology.utils import set_determinism
+
 
 class Trainer:
     def __init__(
@@ -46,11 +47,11 @@ class Trainer:
     def train_epoch(self, epoch_idx: int):
         self.model.train()
         iterator = tqdm(
-            self.train_dataloader, 
+            self.train_dataloader,
             total=len(self.train_dataloader),
-            desc=f"Train Epoch {epoch_idx}/{self.max_epochs}"
+            desc=f"Train Epoch {epoch_idx}/{self.max_epochs}",
         )
-        
+
         for inputs, targets in iterator:
             inputs, targets = inputs.to(self.device), targets.to(self.device)
             self.optimizer.zero_grad()
@@ -60,9 +61,11 @@ class Trainer:
 
             # collect auxiliary losses
             auxiliary_loss = []
+
             def get_auxiliary_loss(module):
                 if hasattr(module, "get_auxiliary_loss"):
                     auxiliary_loss.append(module.get_auxiliary_loss())
+
             self.model.apply(get_auxiliary_loss)
             auxiliary_loss = sum(auxiliary_loss)
 
@@ -76,16 +79,18 @@ class Trainer:
 
             # logging and printing
             iterator.set_postfix({"loss": loss.item()})
-            self.logger.log({
-                "train/loss": loss, 
-                "train/main_loss": main_loss, 
-                "train/auxiliar_loss": auxiliary_loss, 
-                "epoch": epoch_idx
-            })
+            self.logger.log(
+                {
+                    "train/loss": loss,
+                    "train/main_loss": main_loss,
+                    "train/auxiliar_loss": auxiliary_loss,
+                    "epoch": epoch_idx,
+                }
+            )
 
     def test(self, epoch_idx: int):
         self.model.eval()
-        
+
         test_loss = 0
         all_preds = []
         all_targets = []
@@ -93,10 +98,9 @@ class Trainer:
         with torch.no_grad(), tqdm(
             total=len(self.test_dataloader),
             desc=f"Valid Epoch {epoch_idx}/{self.max_epochs}",
-            postfix={"loss": "-", "acc": "-"}
+            postfix={"loss": "-", "acc": "-"},
         ) as iterator:
-            for inputs, targets in self.test_dataloader: 
-
+            for inputs, targets in self.test_dataloader:
                 inputs, targets = inputs.to(self.device), targets.to(self.device)
                 logits = self.model(inputs)
 
@@ -105,33 +109,31 @@ class Trainer:
                 )
                 test_loss += loss / len(self.test_dataloader)
 
-                # SE: important to 
+                # SE: important to
                 all_preds.append(torch.argmax(logits, dim=-1).cpu())
                 all_targets.append(targets.cpu())
                 iterator.update(1)
 
-  
             test_accuracy = compute_accuracy(
-                torch.cat(all_preds, dim=0), 
-                torch.cat(all_targets, dim=0)
+                torch.cat(all_preds, dim=0), torch.cat(all_targets, dim=0)
             )
 
             # logging and printing
-            metrics = {"valid/loss": test_loss.item(), "valid/accuracy": test_accuracy.item()}
-            iterator.set_postfix(metrics)
-            self.logger.log({
-                "epoch": epoch_idx,
-                **metrics
+            metrics = {
+                "valid/loss": test_loss.item(),
+                "valid/accuracy": test_accuracy.item(),
             }
-            )
+            iterator.set_postfix(metrics)
+            self.logger.log({"epoch": epoch_idx, **metrics})
+        return metrics
 
     def fit(self):
         self.model.to("cuda")
         self.loss_fn = nn.CrossEntropyLoss()
         self.optimizer = optim.AdamW(
-            self.model.parameters(), 
-            lr=self.learning_rate, 
-            weight_decay=self.weight_decay
+            self.model.parameters(),
+            lr=self.learning_rate,
+            weight_decay=self.weight_decay,
         )
         self.scheduler = optim.lr_scheduler.CosineAnnealingLR(
             self.optimizer, T_max=self.max_epochs, eta_min=0.0
@@ -141,21 +143,22 @@ class Trainer:
             metrics = self.test(epoch_idx)
 
             # early stopping
-            if (
-                self.early_stopping_metric is not None and 
-                metrics[self.early_stopping_metric] > self.early_stopping_threshold
-            ):
+            if (self.early_stopping_metric is not None) and metrics[
+                self.early_stopping_metric
+            ] > self.early_stopping_threshold:
                 break
 
             self.scheduler.step()
 
 
-def compute_accuracy(preds: torch.Tensor, targets: torch.Tensor, ignore_index: int =-100):
+def compute_accuracy(
+    preds: torch.Tensor, targets: torch.Tensor, ignore_index: int = -100
+):
     return (preds == targets)[targets != ignore_index].to(float).mean()
 
 
 def train(config: TrainConfig):
-    # TODO (SE): need to actaully verify reproducibility here 
+    # TODO (SE): need to actaully verify reproducibility here
     set_determinism(config.seed)
     logger = WandbLogger(config)
     logger.log_config(config)
@@ -172,12 +175,13 @@ def train(config: TrainConfig):
         max_epochs=config.max_epochs,
         learning_rate=config.learning_rate,
         weight_decay=config.weight_decay,
+        early_stopping_metric=config.early_stopping_metric,
+        early_stopping_threshold=config.early_stopping_threshold,
         device="cuda" if torch.cuda.is_available() else "cpu",
         logger=logger,
     )
     task.fit()
     logger.finish()
-    
 
 
 if __name__ == "__main__":

@@ -63,7 +63,7 @@ class SelectiveLookups(nn.Module):
         )
         context = self.inner_attn(qkv)
         attn_output = self.out_proj(rearrange(context, "... h d -> ... (h d)"))
-        
+
         selection = torch.softmax(self.selecting(x), dim=1)
 
         # selection = self.selecting(x)
@@ -91,7 +91,9 @@ class SelectiveLookups(nn.Module):
             _, l, d = x.shape
             k = math.ceil(math.sqrt(l))
             out = torch.topk(selection, k=k, dim=1, sorted=False)
-            src = torch.gather(attn_output * selection, dim=1, index=out.indices.repeat(1, 1, d))
+            src = torch.gather(
+                attn_output * selection, dim=1, index=out.indices.repeat(1, 1, d)
+            )
             y = x.scatter_add_(dim=1, index=out.indices.repeat(1, 1, d), src=src)
 
         return y
@@ -107,7 +109,8 @@ class SigmoidLookups(nn.Module):
         bias: bool = True,
         dropout: float = 0.0,
         layer_idx: int = None,
-        selection_penalty: float = 0.001
+        selection_penalty: float = 0.001,
+        n_lookups: int = None
     ) -> None:
         super().__init__()
         self.d_model = d_model
@@ -120,19 +123,21 @@ class SigmoidLookups(nn.Module):
         self.inner_attn = SelfAttention(attention_dropout=dropout)
         self.out_proj = nn.Linear(d_model, d_model)
         self.selection_penalty = selection_penalty
+        self.n_lookups = n_lookups
 
         self._auxiliary_loss = 0.0
 
     def forward(self, x: torch.Tensor):
         """"""
+        _, l, d = x.shape
         qkv = self.Wqkv(x)
         qkv = rearrange(
             qkv, "... (three h d) -> ... three h d", three=3, d=self.head_dim
         )
         context = self.inner_attn(qkv)
         attn_output = self.out_proj(rearrange(context, "... h d -> ... (h d)"))
-        
-        selection = torch.sigmoid(self.selecting(x) )
+
+        selection = torch.sigmoid(self.selecting(x))
 
         # selection = self.selecting(x)
         # selection = (selection / selection.sum(dim = 1, keepdim=True)) * math.sqrt(x.shape[-1])
@@ -155,17 +160,21 @@ class SigmoidLookups(nn.Module):
             )
 
         if self.training:
-            y = attn_output * selection + x 
-            self._auxiliary_loss = selection.mean() * self.selection_penalty
+            n_lookups = math.sqrt(l) if self.n_lookups is None else self.n_lookups
+            y = attn_output * selection + x
+            self._auxiliary_loss = (
+                torch.relu(selection.mean() - (n_lookups / l))
+                * self.selection_penalty
+            )
 
-            y = y #+ torch.randn_like(x) * (torch.rand(1).to(device=x.device) > 0.8).float() * 1 *  selection
+            y = y  # + torch.randn_like(x) * (torch.rand(1).to(device=x.device) > 0.8).float() * 1 *  selection
         else:
-            _, l, d = x.shape
-            k = math.ceil(math.sqrt(l))
+            k = math.ceil(math.sqrt(l)) if self.n_lookups is None else self.n_lookups
             out = torch.topk(selection, k=k, dim=1, sorted=False)
-            src = torch.gather(attn_output * selection, dim=1, index=out.indices.repeat(1, 1, d))
+            src = torch.gather(
+                attn_output * selection, dim=1, index=out.indices.repeat(1, 1, d)
+            )
             y = x.scatter_add_(dim=1, index=out.indices.repeat(1, 1, d), src=src)
-
 
         return y
 
@@ -173,7 +182,6 @@ class SigmoidLookups(nn.Module):
         loss = self._auxiliary_loss
         self._auxiliary_loss = 0.0
         return loss
-
 
 
 class SMA(nn.Module):
@@ -208,11 +216,10 @@ class SMA(nn.Module):
         )
         context = self.inner_attn(qkv)
         attn_output = self.out_proj(rearrange(context, "... h d -> ... (h d)"))
-        
-        selection = torch.softmax(
-            self.selection_proj(x) / self.temperature, 
-            dim=-1
-        )[..., 1:]
+
+        selection = torch.softmax(self.selection_proj(x) / self.temperature, dim=-1)[
+            ..., 1:
+        ]
 
         # selection = self.selecting(x)
         # selection = (selection / selection.sum(dim = 1, keepdim=True)) * math.sqrt(x.shape[-1])
@@ -240,7 +247,9 @@ class SMA(nn.Module):
             _, l, d = x.shape
             k = math.ceil(math.sqrt(l))
             out = torch.topk(selection, k=k, dim=1, sorted=False)
-            src = torch.gather(attn_output * selection, dim=1, index=out.indices.repeat(1, 1, d))
+            src = torch.gather(
+                attn_output * selection, dim=1, index=out.indices.repeat(1, 1, d)
+            )
             y = x.scatter_add_(dim=1, index=out.indices.repeat(1, 1, d), src=src)
 
         return y
