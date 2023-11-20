@@ -102,7 +102,7 @@ class TransformerBlock(nn.Module):
             d_model=config.d_model,
             layer_idx=layer_idx,
         )
-        self.state_mixer = config.sequence_mixer.instantiate(
+        self.state_mixer = config.state.instantiate(
             d_model=config.d_model,
             layer_idx=layer_idx,
         )
