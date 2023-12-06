@@ -12,8 +12,8 @@ VOCAB_SIZE = 8_192
 
 configs = []
 for input_seq_len, num_kv_pairs in [
-    (64, 4),
-    # (128, 8),
+    # (64, 4),
+    (128, 8),
     # (256, 16),
     # (512, 64),
 ]:
@@ -24,7 +24,7 @@ for input_seq_len, num_kv_pairs in [
     elif input_seq_len == 256:
         batch_size = 256
     else:
-        batch_size = 1024
+        batch_size = 512
 
     data = DataConfig(
         num_train_examples=100_000,
@@ -96,6 +96,13 @@ for input_seq_len, num_kv_pairs in [
                         "d_state": input_seq_len,  # makes it mathematically equivalent to Hyena
                         "head_dim": 2
                     }
+                ),
+                "based": dict(
+                    name="zoology.mixers.based.Based",
+                    kwargs={
+                        "l_max": input_seq_len,
+                        "feature_dim": 8,
+                    }
                 )
             }
 
@@ -105,7 +112,9 @@ for input_seq_len, num_kv_pairs in [
                 # "rwkv",
                 # "base_conv"
                 # "base_conv_explicit",
-                "h3"
+                # "h3"
+                # "base_conv_explicit"
+                "based"
             ]:
                 model = ModelConfig(
                     d_model=d_model,
