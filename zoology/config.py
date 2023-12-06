@@ -97,6 +97,8 @@ class ModelConfig(BaseConfig):
     layer_norm_epsilon: float = 1e-5
     pad_vocab_size_multiple: int = 1
 
+    block_type: str = "TransformerBlock"
+
 class LoggerConfig(BaseConfig):
 
     project_name: str = "zoology"

@@ -45,9 +45,9 @@ for input_seq_len, num_kv_pairs in [
     )
 
     for d_model in [
-        64, 
-        # 128, 
-        # 256, 
+        # 64, 
+        128, 
+        256, 
         # 512
     ]:
         for lr in  np.logspace(-4, -2, 4):
@@ -114,7 +114,11 @@ for input_seq_len, num_kv_pairs in [
                             "feature_dim": 8,
                         }
                     )
-                ]
+                ],
+                "mamba": dict(
+                    name="zoology.mixers.mamba.Mamba",
+                    kwargs={}
+                ),
             }
 
             for sequence_mixer in [
@@ -125,11 +129,19 @@ for input_seq_len, num_kv_pairs in [
                 # "base_conv_explicit",
                 # "h3"
                 # "base_conv_explicit"
-                "based"
+                # "based"
+                "mamba"
             ]:
+
+                if 'mamba' in sequence_mixer:
+                    block_type = "MambaBlock"
+                else:
+                    block_type = "TransformerBlock"
+
                 model = ModelConfig(
                     d_model=d_model,
                     n_layers=2,
+                    block_type=block_type,
                     max_position_embeddings=input_seq_len if sequence_mixer == "attention" else 0,
                     vocab_size=VOCAB_SIZE,
                     sequence_mixer=MIXERS[sequence_mixer],
