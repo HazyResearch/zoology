@@ -5,7 +5,7 @@ from zoology.config import TrainConfig, ModelConfig, DataConfig
 
 sweep_id = uuid.uuid4().hex[:6]
 sweep_id = "fact_retrieval" + sweep_id
-
+print(sweep_id)
 
 configs = []
 for n in [512, 1024, 2048, 4096, 8192, 16384]:
@@ -27,7 +27,7 @@ for n in [512, 1024, 2048, 4096, 8192, 16384]:
     )
 
     for d_model in [32, 64, 128, 256, 512, 1024]:
-        for lr in  np.logspace(-4, -2, 4):
+        for lr in  [4e-4]:
             
             MIXERS = {
                 "attention": dict(
