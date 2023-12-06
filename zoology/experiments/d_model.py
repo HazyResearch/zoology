@@ -45,10 +45,10 @@ for input_seq_len, num_kv_pairs in [
     )
 
     for d_model in [
-        # 64, 
-        128, 
-        256, 
-        512
+        64, 
+        # 128, 
+        # 256, 
+        # 512
     ]:
         for lr in  np.logspace(-4, -2, 4):
             
@@ -97,13 +97,24 @@ for input_seq_len, num_kv_pairs in [
                         "head_dim": 2
                     }
                 ),
-                "based": dict(
-                    name="zoology.mixers.based.Based",
-                    kwargs={
-                        "l_max": input_seq_len,
-                        "feature_dim": 8,
-                    }
-                )
+                "based": [
+                    dict(
+                        name="zoology.mixers.base_conv.BaseConv",
+                        kwargs={
+                            "l_max": input_seq_len,
+                            # pass a list of kernel sizes for each of four layers
+                            "kernel_size": 3,
+                            "implicit_long_conv": True
+                        }
+                    ),
+                    dict(
+                        name="zoology.mixers.based.Based",
+                        kwargs={
+                            "l_max": input_seq_len,
+                            "feature_dim": 8,
+                        }
+                    )
+                ]
             }
 
             for sequence_mixer in [

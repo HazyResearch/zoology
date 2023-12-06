@@ -102,10 +102,16 @@ class TransformerBlock(nn.Module):
 
     def __init__(self, config: ModelConfig, layer_idx: int):
         super().__init__()
-        self.sequence_mixer = config.sequence_mixer.instantiate(
-            d_model=config.d_model,
-            layer_idx=layer_idx,
-        )
+        if isinstance(config.sequence_mixer, list):
+            self.sequence_mixer = config.sequence_mixer[layer_idx].instantiate(
+                d_model=config.d_model,
+                layer_idx=layer_idx,
+            )
+        else: 
+            self.sequence_mixer = config.sequence_mixer.instantiate(
+                d_model=config.d_model,
+                layer_idx=layer_idx,
+            )
         self.state_mixer = config.state_mixer.instantiate(
             d_model=config.d_model,
             layer_idx=layer_idx,

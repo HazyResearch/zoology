@@ -1,7 +1,7 @@
 import argparse
 from datetime import datetime
 from functools import partial
-from typing import List
+from typing import List, Union
 
 from pydantic import BaseModel
 
@@ -79,7 +79,7 @@ class DataConfig(BaseConfig):
     force_cache: bool = False 
 
 class ModelConfig(BaseConfig):
-    sequence_mixer: ModuleConfig = None
+    sequence_mixer: Union[List[ModuleConfig], ModuleConfig] = None
     state_mixer: ModuleConfig = ModuleConfig(
         name="zoology.mixers.mlp.MLP", 
         kwargs={"hidden_mult": 4}
