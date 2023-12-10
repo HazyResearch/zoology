@@ -101,7 +101,8 @@ class ModelConfig(BaseConfig):
 
 class LoggerConfig(BaseConfig):
 
-    project_name: str = "zoology"
+    project_name: str = None
+    entity: str = None
     
 
 class TrainConfig(BaseConfig):
