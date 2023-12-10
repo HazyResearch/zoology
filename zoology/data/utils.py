@@ -147,9 +147,13 @@ def prepare_data(configs: List[DataConfig]) -> Tuple[DataLoader]:
 
             # generate data
             data: SyntheticData = builder(
-                input_seq_len=config.input_seq_len,
                 vocab_size=config.vocab_size,
+                num_train_examples=config.num_train_examples,
+                num_test_examples=config.num_test_examples,
+                input_seq_len=config.input_seq_len,
+                
                 seed=config.seed,
+                num_kv_pairs=config.num_kv_pairs,
             )
 
             if config.cache_dir is not None:

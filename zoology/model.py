@@ -150,7 +150,7 @@ class LMBackbone(nn.Module):
         if config.block_type == 'TransformerBlock':
             block_cls = TransformerBlock
         elif config.block_type == 'MambaBlock':
-            from mixers.mamba import MambaBlock
+            from zoology.mixers.mamba import MambaBlock
             block_cls = MambaBlock
         self.layers = nn.ModuleList(
             [
