@@ -25,7 +25,7 @@ _OPTIONAL = {
 # ensure that torch is installed, and send to torch website if not
 try:
     import torch
-except ImportError:
+except ModuleNotFoundError:
     raise ValueError("Please install torch first: https://pytorch.org/get-started/locally/")
 
 

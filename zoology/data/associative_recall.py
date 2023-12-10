@@ -4,55 +4,62 @@ import torch
 
 from .utils import SyntheticData, builder_from_single
 
-    
-    
-@builder_from_single
-def base_ar(
-    vocab_size: int,
-    input_seq_len: int,
-    rng: np.random.Generator,
-):
-    """Generate sequence where the input has a sequence of key value pairs
-    and the copy prefix at the end, and then a key value pair is inserted
-    after the copy prefix."""
-    non_special_vocab_size = vocab_size - 1
-    keys = np.arange(non_special_vocab_size // 2)
-    values = np.arange(non_special_vocab_size // 2, non_special_vocab_size)
-    keys = [ [key] for key in keys ]
-    kv_map = {tuple(k): rng.choice(values) for k in keys}
 
-    key_present = {}
-    vocab_seq = []
-    pair_length = 2
-    input_seq_len -= 2
-    for _ in range(input_seq_len // (pair_length)):
-        k = tuple(rng.choice(list(kv_map.keys())))
-        v = kv_map[k]
-        vocab_seq += list(k) + [v]
-        key_present[k] = True
-
-    k = tuple(rng.choice(list(kv_map.keys())))
-    while k not in key_present:
-        k = tuple(rng.choice(list(key_present.keys())))
-    to_copy = [vocab_size - 1] + list(k) + [ kv_map[k]  ]
-    vocab_seq = vocab_seq + to_copy
-    seq = torch.tensor(vocab_seq)
-    return seq[:-1], seq[1:]
-
-
-
-def gap_power_distr_ar(
-    vocab_size: int,
-    num_train_examples: int,
-    num_test_examples: int,
-    input_seq_len: int,
-    seed: int,
-    num_kv_pairs: int,
+def multiquery_ar(
+    vocab_size: int=8_192,
+    num_train_examples: int=100_000,
+    num_test_examples: int=3_000,
+    input_seq_len: int=64,
+    num_kv_pairs: int=4,
     train_power_a: float=0.01,
     test_power_a: float=0.01,
-    random_non_queries: bool=True
-):
-    train_inputs, train_labels = _gap_power_distr_ar(
+    random_non_queries: bool=True,
+    seed: int=0,
+) -> SyntheticData:
+    """
+    Generates synthetic data for the multi-query associative recall task as described in
+    Arora,Eyuboglu, et al. "Zoology: Measuring and improving recall in efficient language models.".
+
+    The generated 
+    Example: 
+        `multiquery_ar(vocab_size=12, num_kv_pairs=2, input_seq_len=16, random_non_queries=False)` 
+        will generate input and label sequences of the form: 
+                
+                Key   Val  Key  Val            Query                         Query
+        Inputs: 2     8    4    7    0    0    4    0    0    0    0    0    2    0    0 
+        Labels: -100 -100 -100 -100 -100 -100  7    -100 -100 -100 -100 -100 8    -100 -100
+
+        The -100 labels are ignored by the loss function and metrics.
+
+    Args:
+        vocab_size (int): The size of the vocabulary. As discussed in the Zoology 
+            paper, large vocabulary sizes (>1k) can be important for highlighting 
+            differences between model architectures. Defaults to 8_192.
+        num_train_examples (int): The number of training examples to generate. Defaults 
+            to 100_000.
+        num_test_examples (int): The number of test examples to generate. Defaults to 
+            3_000.
+        input_seq_len (int): The length of the input sequence. Defaults to 64. In 
+            In Figure 2 of the Zoology paper, we vary the input sequence length from 
+            64 to 512 and the number of key-value pairs from 4 to 64.
+        seed (int): The seed for the random number generator.
+        num_kv_pairs (int): The number of key-value pairs.
+        train_power_a (float, optional): The power for the power law distribution for 
+            training data. Defaults to 0.01.
+        test_power_a (float, optional): The power for the power law distribution for 
+            test data. Defaults to 0.01.
+        random_non_queries (bool, optional): If True, replace all the 0's (as in the 
+            example above) with random values in the input. Defaults to True.
+
+    Returns:
+        SyntheticData: A SyntheticData object containing the generated train and test 
+            inputs and labels.
+
+    Raises:
+        Warning: If potential data leakage is detected between the train and test sets.
+    """
+
+    train_inputs, train_labels = _mqar(
         vocab_size=vocab_size,
         num_examples=num_train_examples,
         input_seq_len=input_seq_len,
@@ -61,7 +68,7 @@ def gap_power_distr_ar(
         num_kv_pairs=num_kv_pairs,
         random_non_queries=random_non_queries
     )
-    test_inputs, test_labels = _gap_power_distr_ar(
+    test_inputs, test_labels = _mqar(
         vocab_size=vocab_size,
         num_examples=num_test_examples,
         input_seq_len=input_seq_len,
@@ -90,7 +97,7 @@ def gap_power_distr_ar(
     return data
 
 
-def _gap_power_distr_ar(
+def _mqar(
     vocab_size: int,
     num_examples: int,
     input_seq_len: int,
@@ -98,13 +105,10 @@ def _gap_power_distr_ar(
     power_a: float=0.01,
     num_kv_pairs: int=8,
     random_non_queries: bool=True
-): #-> SyntheticData:
-    """
-    """
+):
     assert input_seq_len % 2 == 0, "input_seq_len must be even"
     assert vocab_size > input_seq_len
     assert num_kv_pairs * 4 <= input_seq_len
-    SPECIAL_VOCAB = {"copy_prefix": 0}
 
     np.random.seed(seed)
 
@@ -140,7 +144,6 @@ def _gap_power_distr_ar(
     np.put_along_axis(queries, (gaps * 2), values=keys, axis=1)
     examples = np.concatenate([
         kvs, 
-        # np.full((num_examples, 1), SPECIAL_VOCAB["copy_prefix"], dtype=np.int64), 
         queries
     ], axis=1)
 
@@ -153,3 +156,37 @@ def _gap_power_distr_ar(
     if random_non_queries:
         inputs[inputs == 0] = torch.randint(vocab_size, size=inputs.shape)[inputs == 0]
     return inputs, labels
+
+    
+@builder_from_single
+def base_ar(
+    vocab_size: int,
+    input_seq_len: int,
+    rng: np.random.Generator,
+):
+    """Generate sequence where the input has a sequence of key value pairs
+    and the copy prefix at the end, and then a key value pair is inserted
+    after the copy prefix."""
+    non_special_vocab_size = vocab_size - 1
+    keys = np.arange(non_special_vocab_size // 2)
+    values = np.arange(non_special_vocab_size // 2, non_special_vocab_size)
+    keys = [ [key] for key in keys ]
+    kv_map = {tuple(k): rng.choice(values) for k in keys}
+
+    key_present = {}
+    vocab_seq = []
+    pair_length = 2
+    input_seq_len -= 2
+    for _ in range(input_seq_len // (pair_length)):
+        k = tuple(rng.choice(list(kv_map.keys())))
+        v = kv_map[k]
+        vocab_seq += list(k) + [v]
+        key_present[k] = True
+
+    k = tuple(rng.choice(list(kv_map.keys())))
+    while k not in key_present:
+        k = tuple(rng.choice(list(key_present.keys())))
+    to_copy = [vocab_size - 1] + list(k) + [ kv_map[k]  ]
+    vocab_seq = vocab_seq + to_copy
+    seq = torch.tensor(vocab_seq)
+    return seq[:-1], seq[1:]

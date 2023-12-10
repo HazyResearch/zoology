@@ -1,7 +1,6 @@
 import argparse
 from datetime import datetime
 from functools import partial
-from typing import List, Union
 
 from pydantic import BaseModel
 
@@ -80,7 +79,7 @@ class DataConfig(BaseConfig):
     force_cache: bool = False 
 
 class ModelConfig(BaseConfig):
-    sequence_mixer: Union[List[ModuleConfig], ModuleConfig] = None
+    sequence_mixer: ModuleConfig = None
     state_mixer: ModuleConfig = ModuleConfig(
         name="zoology.mixers.mlp.MLP", 
         kwargs={"hidden_mult": 4}
@@ -106,7 +105,7 @@ class LoggerConfig(BaseConfig):
     
 
 class TrainConfig(BaseConfig):
-    data: List[DataConfig] = [DataConfig()]
+    data: DataConfig = DataConfig()
     model: ModelConfig = ModelConfig()
     logger: LoggerConfig = LoggerConfig()
 
@@ -117,11 +116,9 @@ class TrainConfig(BaseConfig):
     early_stopping_metric: str = "valid/accuracy"
     early_stopping_threshold: float = 0.99
 
-
     learning_rate: float = 1e-3
     weight_decay: float = 0.1
     seed: int = 123
-
 
     launch_id: str = None
     sweep_id: str = None

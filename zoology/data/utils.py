@@ -95,7 +95,7 @@ def builder_from_single(single_fn: callable):
     return _build_from_single
 
 
-def prepare_data(configs: List[DataConfig]) -> Tuple[DataLoader]:
+def prepare_data(config: DataConfig) -> Tuple[DataLoader]:
     """
     Prepares the data for training and testing.
     This function checks if a cache directory is available and if the data is already 
@@ -115,84 +115,55 @@ def prepare_data(configs: List[DataConfig]) -> Tuple[DataLoader]:
         >>> train_dl, test_dl = prepare_data(config) 
     """
     
-    train_inputs = []
-    train_labels = []
-    test_inputs = []
-    test_labels = []
     
-    for config in configs:
-        if config.cache_dir is not None:
+    if config.cache_dir is not None:
+        try:
+            Path(config.cache_dir).mkdir(exist_ok=True, parents=True)
+        except:
+            print(f"Could not create cache directory {config.cache_dir}")
+            config.cache_dir = None
+    cache_path = _get_cache_path(config)
+    # check cache
+    if config.cache_dir is not None and os.path.exists(cache_path) and not config.force_cache:
+        # load from cache
+        print(f"Loading data from on-disk cache at {cache_path}...") 
+        # SE 09-12-23: there's some sporadic issue in torch load that gives
+        # RuntimeError: PytorchStreamReader failed reading file data/2: file read failed
+        MAX_RETRIES = 10
+        for _ in range(MAX_RETRIES):
             try:
-                Path(config.cache_dir).mkdir(exist_ok=True, parents=True)
-            except:
-                print(f"Could not create cache directory {config.cache_dir}")
-                config.cache_dir = None
-        cache_path = _get_cache_path(config)
-        # check cache
-        if config.cache_dir is not None and os.path.exists(cache_path) and not config.force_cache:
-            # load from cache
-            print(f"Loading data from on-disk cache at {cache_path}...") 
-            # SE 09-12-23: there's some sporadic issue in torch load that gives
-            # RuntimeError: PytorchStreamReader failed reading file data/2: file read failed
-            MAX_RETRIES = 10
-            for _ in range(MAX_RETRIES):
-                try:
-                    data = SyntheticData(**torch.load(cache_path))
-                    break
-                except RuntimeError as e:
-                    print(e)
-        else:
-            print(f"Generating dataset...") 
-            builder = config.builder.instantiate()
+                data = SyntheticData(**torch.load(cache_path))
+                break
+            except RuntimeError as e:
+                print(e)
+    else:
+        print(f"Generating dataset...") 
+        builder = config.builder.instantiate()
 
-            # generate data
-            data: SyntheticData = builder(
-                vocab_size=config.vocab_size,
-                num_train_examples=config.num_train_examples,
-                num_test_examples=config.num_test_examples,
-                input_seq_len=config.input_seq_len,
-                
-                seed=config.seed,
-                num_kv_pairs=config.num_kv_pairs,
-            )
+        # generate data
+        data: SyntheticData = builder(
+            vocab_size=config.vocab_size,
+            num_train_examples=config.num_train_examples,
+            num_test_examples=config.num_test_examples,
+            input_seq_len=config.input_seq_len,
+            
+            seed=config.seed,
+            num_kv_pairs=config.num_kv_pairs,
+        )
 
-            if config.cache_dir is not None:
-                print(f"Saving dataset to on-disk cache at {cache_path}...") 
-                torch.save(asdict(data), cache_path)
-        # data.check_shapes(
-        #     num_train_examples=config.num_train_examples, 
-        #     num_test_examples=config.num_test_examples,
-        #     input_seq_len=config.input_seq_len,
-        # )
-        
-        # concatenate data together 
-        train_inputs.append(data.train_inputs)
-        train_labels.append(data.train_labels)
-        test_inputs.append(data.test_inputs)
-        test_labels.append(data.test_labels)
-        
-        
-    train_inputs, train_labels = _shuffle(train_inputs, train_labels)
-    train_inputs, train_labels = list(train_inputs), list(train_labels)
-    test_inputs, test_labels = _shuffle(test_inputs, test_labels)
-    test_inputs, test_labels = list(test_inputs), list(test_labels)
-        
-    train_inputs = torch.cat(train_inputs, dim=0)
-    train_labels = torch.cat(train_labels, dim=0)
-    test_inputs = torch.cat(test_inputs, dim=0)
-    test_labels = torch.cat(test_labels, dim=0)
+        if config.cache_dir is not None:
+            print(f"Saving dataset to on-disk cache at {cache_path}...") 
+            torch.save(asdict(data), cache_path)
+
     
-    print(f"Number of samples: {len(train_inputs)}")
-    
-    # pass x and y to dataloader each offset by one
     train_dl = DataLoader(
-        TensorDataset(train_inputs, train_labels),
+        TensorDataset(data.train_inputs, data.train_labels),
         batch_size=config.batch_size,
         num_workers=0,
         shuffle=True,
     )
     test_dl = DataLoader(
-        TensorDataset(test_inputs, test_labels),
+        TensorDataset(data.test_inputs, data.test_labels),
         batch_size=config.batch_size,
         num_workers=0,
         shuffle=True,
