@@ -33,7 +33,7 @@ def execute_config(
 @click.option("--gpus", default=None, type=str)
 def main(python_file, outdir, name: str, parallelize: bool, gpus: str):
 
-    if parallelize and gpus is not None:
+    if gpus is not None:
         os.environ["CUDA_VISIBLE_DEVICES"] = gpus
 
 

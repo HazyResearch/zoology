@@ -1,7 +1,6 @@
 import argparse
 from datetime import datetime
 from functools import partial
-from typing import List
 
 from pydantic import BaseModel
 
@@ -73,6 +72,7 @@ class DataConfig(BaseConfig):
     input_seq_len: int = 64
     vocab_size: int = 8_192
     batch_size: int = 32
+    num_kv_pairs: int = -1
     
     cache_dir: str = None
     caching: bool = True
@@ -88,6 +88,7 @@ class ModelConfig(BaseConfig):
     d_model: int = 128
     n_layers: int = 2
     max_position_embeddings: int = 64
+    learnable_word_embeddings: bool = True
     vocab_size: int = 8_192
 
     resid_dropout: float = 0.0
@@ -96,17 +97,18 @@ class ModelConfig(BaseConfig):
     layer_norm_epsilon: float = 1e-5
     pad_vocab_size_multiple: int = 1
 
+    block_type: str = "TransformerBlock"
+
 class LoggerConfig(BaseConfig):
 
     project_name: str = "zoology"
     
 
 class TrainConfig(BaseConfig):
-    data: List[DataConfig] = [DataConfig()]
+    data: DataConfig = DataConfig()
     model: ModelConfig = ModelConfig()
     logger: LoggerConfig = LoggerConfig()
 
-    
     max_epochs: int = 100
 
     # stop training once this metric reaches the threshold
@@ -114,14 +116,12 @@ class TrainConfig(BaseConfig):
     early_stopping_metric: str = "valid/accuracy"
     early_stopping_threshold: float = 0.99
 
-
     learning_rate: float = 1e-3
-
+    weight_decay: float = 0.1
+    seed: int = 123
 
     launch_id: str = None
+    sweep_id: str = None
     run_id: str = "default"
-
-
-
 
 

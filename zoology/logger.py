@@ -25,5 +25,8 @@ class WandbLogger:
 
     def log(self, metrics: dict):
         wandb.log(metrics)
+    
+    def finish(self):
+        self.run.finish()
 
 

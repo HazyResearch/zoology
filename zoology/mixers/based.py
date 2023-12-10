@@ -348,7 +348,7 @@ def _expand_mask(mask: torch.Tensor, dtype: torch.dtype, tgt_len: Optional[int] 
     return _prepare_4d_attention_mask(mask=mask, dtype=dtype, tgt_len=tgt_len)
 
 
-class LinearAttentionHedgehog(nn.Module):
+class Based(nn.Module):
     def __init__(
         self,
         d_model: int,

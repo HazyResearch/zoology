@@ -3,20 +3,21 @@ from zoology.config import TrainConfig, ModelConfig, DataConfig
 
 
 config = TrainConfig(
-    data=[DataConfig(
-        cache_dir="/dfs/scratch0/mfchen/.cache",
-        vocab_size=128,
+    data=DataConfig(
+        cache_dir="/var/cr05_data/sabri_data/zg-synthetics",
+        vocab_size=256,
+        input_seq_len=128,
+        num_train_examples=10_000,
+        num_test_examples=1_000,
         builder={
-            "name": "zoology.data.associative_recall.gap_power_distr_ar",
-            "kwargs": {
-                "num_kv_pairs": 4
-            }
+            "name": "zoology.data.associative_recall.base_ar",
+            "kwargs": {}
         },
         
-    )
-    ],
-    model=dict(
-        vocab_size=128,
+    ),
+    model=ModelConfig(
+        vocab_size=256,
+        max_position_embeddings=128,
         sequence_mixer={
             "name": "zoology.mixers.attention.MHA",
             "kwargs": {
