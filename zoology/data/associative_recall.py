@@ -20,7 +20,6 @@ def multiquery_ar(
     Generates synthetic data for the multi-query associative recall task as described in
     Arora,Eyuboglu, et al. "Zoology: Measuring and improving recall in efficient language models.".
 
-    The generated 
     Example: 
         `multiquery_ar(vocab_size=12, num_kv_pairs=2, input_seq_len=16, random_non_queries=False)` 
         will generate input and label sequences of the form: 
@@ -30,6 +29,21 @@ def multiquery_ar(
         Labels: -100 -100 -100 -100 -100 -100  7    -100 -100 -100 -100 -100 8    -100 -100
 
         The -100 labels are ignored by the loss function and metrics.
+    
+    We include one important note on the power law distribution. In real language data, 
+    the gap between repeated bigrams follows a power law. Intuitively, if the bigram
+    "common buzzard" appears in text, the probability of the bigram appearing again 
+    drops the further away from the orginal mention we are. In our synthetic, we can 
+    control this with the power law parameters `train_power_a` and `test_power_a`. 
+    Setting these to 1.0 will result in a uniform distribution. You can visualize the
+    distribution with the following code:
+    ```
+    space = 100
+    power_a = 0.01  
+    p = power_a * np.arange(1, space + 1) ** (power_a-1)
+    p = p / p.sum()
+    plt.plot(p)
+    ```
 
     Args:
         vocab_size (int): The size of the vocabulary. As discussed in the Zoology 
