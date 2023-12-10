@@ -151,7 +151,7 @@ for input_seq_len, num_kv_pairs in [
                 # "rwkv",
                 # "base_conv"
                 # "base_conv_explicit",
-                # "h3"
+                "h3"
                 # "base_conv_explicit"
                 "based",
                 "based_no_taylor"
