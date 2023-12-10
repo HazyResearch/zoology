@@ -4,7 +4,7 @@
 [![GitHub](https://img.shields.io/github/license/HazyResearch/meerkat)](https://img.shields.io/github/license/HazyResearch/meerkat)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 
-**Understand and test machine learning architectures on synthetic tasks.**
+**Understand and test language model architectures on synthetic tasks.**
 
 
 </div>
