@@ -28,6 +28,10 @@ pip install -e .
 ```
 We want to keep this install as lightweight as possible; the only required dependencies are: `torch, einops, tqdm, pydantic, wandb`. There is some extra functionality (*e.g.* launching sweeps in parallel with Ray) that require additional dependencies. To install these, run `pip install -e .[extra,analysis]`.
 
+Then, try running one of the example experiments with: 
+```
+python -m zoology.launch zoology/experiments/examples/basic.py
+```
 
 ## Configuration, Experiments, and Sweeps
 In this section, we'll walk through how to configure an experiment and launch sweeps. 
