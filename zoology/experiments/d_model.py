@@ -104,7 +104,7 @@ for input_seq_len, num_kv_pairs in [
                             "l_max": input_seq_len,
                             # pass a list of kernel sizes for each of four layers
                             "kernel_size": 3,
-                            "implicit_long_conv": True
+                            "implicit_long_conv": True,
                         }
                     ),
                     dict(
@@ -112,9 +112,37 @@ for input_seq_len, num_kv_pairs in [
                         kwargs={
                             "l_max": input_seq_len,
                             "feature_dim": 8,
+                            "num_key_value_heads": 1,
+                            "num_heads": 1,
+                            "feature_name": "taylor_exp"
                         }
                     )
-                ]
+                ],
+                "based_no_taylor": [
+                    dict(
+                        name="zoology.mixers.base_conv.BaseConv",
+                        kwargs={
+                            "l_max": input_seq_len,
+                            # pass a list of kernel sizes for each of four layers
+                            "kernel_size": 3,
+                            "implicit_long_conv": True
+                        }
+                    ),
+                    dict(
+                        name="zoology.mixers.based.Based",
+                        kwargs={
+                            "l_max": input_seq_len,
+                            "feature_dim": d_model,
+                            "num_key_value_heads": 1,
+                            "num_heads": 1,
+                            "feature_name": "none"
+                        }
+                    )
+                ],
+                "mamba": dict(
+                    name="zoology.mixers.mamba.Mamba",
+                    kwargs={}
+                ),
             }
 
             for sequence_mixer in [
@@ -125,11 +153,20 @@ for input_seq_len, num_kv_pairs in [
                 # "base_conv_explicit",
                 # "h3"
                 # "base_conv_explicit"
-                "based"
+                "based",
+                "based_no_taylor"
+                # "mamba"
             ]:
+
+                if 'mamba' in sequence_mixer:
+                    block_type = "MambaBlock"
+                else:
+                    block_type = "TransformerBlock"
+
                 model = ModelConfig(
                     d_model=d_model,
                     n_layers=2,
+                    block_type=block_type,
                     max_position_embeddings=input_seq_len if sequence_mixer == "attention" else 0,
                     vocab_size=VOCAB_SIZE,
                     sequence_mixer=MIXERS[sequence_mixer],

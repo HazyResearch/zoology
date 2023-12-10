@@ -9,7 +9,7 @@
 
 </div>
 
-Zoology provides machine learning researchers with a simple playground for understanding and testing neural network architectures on synthetic tasks. Simplicity is our main design goal: limited dependencies, architecture implementations that are easy to understand, and a straightforward process for adding new synthetic tasks. 
+Zoology provides machine learning researchers with a simple playground for understanding and testing language model architectures on synthetic tasks. Simplicity is our main design goal: limited dependencies, architecture implementations that are easy to understand, and a straightforward process for adding new synthetic tasks. 
 
 ---
 

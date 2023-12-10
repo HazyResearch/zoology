@@ -87,16 +87,17 @@ def _init_weights(
 
     if rescale_prenorm_residual:
         for name, p in module.named_parameters():
-            if name in ["out_proj.weight", "fc2.weight"]:
+            if "out_proj.weight" in name or "fc2.weight" in name:
                 # Special Scaled Initialization --> There are 2 Layer Norms per Transformer Block
                 nn.init.normal_(
                     p, mean=0.0, std=initializer_range / math.sqrt(2 * n_layers)
                 )
             # If using GLU activation for now, we scale the std by 2
-            elif name in ["output_linear.0.weight"]:
+            elif "output_linear.0.weight" in name:
                 nn.init.normal_(
                     p, mean=0.0, std=initializer_range / math.sqrt(2 * n_layers)
                 )
+
 
 class TransformerBlock(nn.Module):
 
@@ -146,9 +147,14 @@ class LMBackbone(nn.Module):
             config.max_position_embeddings,
             learnable=config.learnable_word_embeddings
         )
+        if config.block_type == 'TransformerBlock':
+            block_cls = TransformerBlock
+        elif config.block_type == 'MambaBlock':
+            from zoology.mixers.mamba import MambaBlock
+            block_cls = MambaBlock
         self.layers = nn.ModuleList(
             [
-                TransformerBlock(config=config, layer_idx=i)
+                block_cls(config=config, layer_idx=i)
                 for i in range(config.n_layers)
             ]
         )
