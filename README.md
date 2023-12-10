@@ -70,9 +70,9 @@ fn(torch.tensor([2,4,3])) # [4, 3, 2]
 config = TrainConfig(...)
 configs = [config]
 ```
-See [`zoology/experiments/examples/basic.py`](zoology/experiments/examples/basic.py) for an example. 
+See [`zoology/experiments/examples/basic_ar.py`](zoology/experiments/examples/basic_ar.py) for an example. 
 
-Then run `python -m zoology.launch zoology/experiments/examples/basic.py`, replacing `basic.py` with the path to your experiment. This will launch a single training job. 
+Then run `python -m zoology.launch zoology/experiments/examples/basic_ar.py`, replacing `basic_ar.py` with the path to your experiment. This will launch a single training job. 
 
 
 *Launching sweeps.* To launch a sweep, simply add more configuration objects to the `configs` list. For example, here's the content of [`zoology/experiments/examples/basic_sweep.py`](zoology/experiments/examples/basic_sweep.py):
@@ -91,6 +91,18 @@ To launch sweeps in parallel, you'll need to install [Ray](https://docs.ray.io/e
 Then, you can run `python -m zoology.launch zoology/experiments/basic_sweep.py -p`. 
 This will run the configurations in parallel using a pool of workers, one per GPU.
 
+*Logging.* Zoology uses [Weights and Biases](https://wandb.ai/site) for logging. You'll need to login with `wandb login` and update the `LoggerConfig` in your configuration to point to your project: 
+```python
+from zoology.config import TrainConfig, LoggerConfig
+
+TrainConfig(
+    logger=LoggerConfig(
+        project="my_wandb_project",
+        entity="my_wandb_entity",
+    ),
+    ...
+)
+```
 
 ## Data
 In this section, we'll walk through how to create a new synthetic task and discuss some of the tasks that are already implemented.
