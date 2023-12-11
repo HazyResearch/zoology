@@ -46,7 +46,6 @@ def fftconv_ref(u, k, D, dropout_mask, gelu=True, k_rev=None):
     else:
         return out.to(dtype=u.dtype)
 
-
 class Sin(nn.Module):
     def __init__(self, dim, w=10, train_freq=True):
         super().__init__()
@@ -355,3 +354,131 @@ class Hyena(nn.Module):
             return y, None
         return y
 
+@torch.jit.script
+def _mul_sum(y, q):
+    return (y * q).sum(dim=1)
+
+# reference fftconv with heads
+def fftconv_heads_ref(k, ssm_kernel, D, q, v, head_dim=1, **kwargs):
+    seqlen = k.shape[-1]
+    fft_size = 2 * seqlen
+    kv = (rearrange(k, 'b (h d1) l -> b d1 1 h l', d1=head_dim)
+            * rearrange(v, 'b (h d2) l -> b 1 d2 h l', d2=head_dim))  # b d1 d2 h l
+    kv_f = torch.fft.rfft(kv.to(dtype=ssm_kernel.dtype), n=fft_size) / fft_size
+    ssm_kernel_f = torch.fft.rfft(ssm_kernel, n=fft_size)  # h L+1
+    y = torch.fft.irfft(kv_f * ssm_kernel_f, n=fft_size, norm='forward')[..., :seqlen]  # b d1 d2 h l
+    out = y + kv * D.unsqueeze(-1)  # b d1 d2 h l
+    q = rearrange(q, 'b (h d1) l -> b d1 1 h l', d1=head_dim)
+    if head_dim > 1:
+        out = _mul_sum(out, q)
+        return rearrange(out, 'b d2 h l -> b (h d2) l').to(dtype=k.dtype)
+    else:
+        return rearrange(out * q, 'b 1 1 h l -> b h l').to(dtype=k.dtype)
+
+
+class MultiHeadHyenaOperator(nn.Module):
+    def __init__(
+        self,
+        d_model,
+        l_max,
+        filter_order=64,
+        num_heads=1,
+        inner_factor=1,
+        num_blocks=1,
+        fused_bias_fc=True,
+        dropout=0.0,
+        filter_dropout=0.0,
+        filter_cls="hyena-filter",
+        post_order_ffn=False,
+        layer_idx=None,
+        jit_filter=False,
+        short_filter_order=3,
+        activation="id",
+        return_state=False,
+        **filter_args,
+    ):
+
+        super().__init__()
+        assert (
+            d_model % num_heads == 0
+        ), f"Model dimension {d_model} must be divisible by num heads {num_heads}"
+        assert (
+            l_max % num_blocks == 0
+        ), f"Maximum signal length {l_max} must be divisible by block dimension {num_blocks}"
+        block_dim = l_max // num_blocks
+        head_dim = d_model // num_heads
+
+        self.d_model=d_model
+        self.l_max=l_max
+        self.num_heads=num_heads
+        self.block_dim=block_dim
+        self.head_dim=head_dim
+        self.filter_order=filter_order
+        self.short_filter_order=short_filter_order
+        self.num_blocks=num_blocks
+        self.filter_dropout=filter_dropout
+        self.return_state=return_state
+        self.dropout = nn.Dropout(dropout)
+
+        # setup projections 
+        self.NUM_PROJECTIONS = 3
+        self.in_proj = nn.Linear(self.d_model, self.NUM_PROJECTIONS * self.d_model)
+        self.out_proj = nn.Linear(self.d_model, self.d_model)
+
+
+        total_width = self.d_model * self.NUM_PROJECTIONS
+        self.short_filter = nn.Conv1d(
+            in_channels=total_width,
+            out_channels=total_width,
+            kernel_size=self.short_filter_order,
+            groups=total_width,
+            padding=self.short_filter_order - 1,
+        )
+
+        if "channels" not in filter_args:
+            filter_args["channels"] = 1
+        self.filter_fn = Filter(
+            self.head_dim,
+            order=self.filter_order,
+            seq_len=self.l_max,
+            dropout=self.filter_dropout,
+            bidirectional=False,
+            l_max=self.l_max,
+            **filter_args,
+        )
+
+
+    def forward(self, u, inference_params=None, *args, **kwargs):
+        l = u.size(-2)
+        l_filter = min(l, self.l_max)
+
+        u = self.in_proj(u)
+        u = rearrange(u, "b l d -> b d l")
+        k = self.filter_fn.filter(l_filter, device=u.device)
+        # `c` is always 1 by default
+        k = rearrange(k, "c l v -> c v l", v=self.head_dim)[0].contiguous()
+        
+        uc = self.short_filter(u)[..., :l_filter]
+        x1, x2, v = uc.split(self.d_model, dim=1)
+        x1 = x1.contiguous()
+        x2 = x2.contiguous()
+        v = v.contiguous()
+
+        # print(f"{self.head_dim=}")
+
+        bias = self.filter_fn.bias
+        y = fftconv_heads_ref(
+            v,
+            k,
+            bias,
+            v=x2,
+            head_dim=self.num_heads,
+            q=x1,
+        )
+
+        y = rearrange(y, "b d l -> b l d")
+        y = self.out_proj(y)
+        if self.return_state:
+            return y, None
+        else:
+            return y
