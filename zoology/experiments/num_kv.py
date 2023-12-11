@@ -12,10 +12,10 @@ VOCAB_SIZE = 8_192
 
 configs = []
 for input_seq_len, num_kv_pairs in [
-    (256, 64),
-    (256, 32),
-    (256, 4),
-    (256, 128),
+    # (256, 64),
+    # (256, 32),
+    # (256, 4),
+    (256, 16),
 ]:
     if input_seq_len == 1024:
         batch_size = 64
@@ -130,8 +130,8 @@ for input_seq_len, num_kv_pairs in [
                 # "base_conv_explicit",
                 # "h3"
                 # "base_conv_explicit"
-                "based"
-                # "mamba"
+                # "based"
+                "mamba"
             ]:
 
                 if 'mamba' in sequence_mixer:
@@ -153,6 +153,6 @@ for input_seq_len, num_kv_pairs in [
                     data=[data],
                     learning_rate=lr,
                     max_epochs=64,
-                    run_id=f"{sequence_mixer}-seqlen{input_seq_len}-dmodel{d_model}-lr{lr}-kv{num_kv_pairs}"
+                    run_id=f"num-kv-16-{sequence_mixer}-seqlen{input_seq_len}-dmodel{d_model}-lr{lr}-kv{num_kv_pairs}"
                 )
                 configs.append(config)

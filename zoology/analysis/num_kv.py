@@ -67,8 +67,8 @@ if __name__ == "__main__" :
         launch_ids = []
         if experiment == 'no_random':
             launch_ids = [
-                "default-2023-10-25-22-20-38", 
-                "default-2023-10-26-19-09-31",
+                "default-2023-10-25-22-20-38",    # MHA
+                "default-2023-10-26-19-09-31",    # Hyena
                 "default-2023-10-27-04-13-56",
                 "default-2023-10-29-17-31-26",
                 "default-2023-11-12-00-31-44",
@@ -87,6 +87,8 @@ if __name__ == "__main__" :
                 "default-2023-12-10-09-20-48",
                 "default-2023-12-10-08-47-05",
                 "default-2023-12-10-08-39-31",
+
+                "default-2023-12-11-17-34-25",
             ]
         elif experiment == 'num_heads':
             launch_ids = [
@@ -94,6 +96,10 @@ if __name__ == "__main__" :
                 "default-2023-12-10-09-21-52",
                 "default-2023-12-10-09-21-26",
                 "default-2023-12-10-09-19-19",
+                # "default-2023-10-26-19-09-31",   # Hyena
+
+                "default-2023-12-11-07-42-08",
+                "default-2023-12-11-17-50-00",
             ]
         
         df = fetch_wandb_runs(
@@ -115,6 +121,7 @@ if __name__ == "__main__" :
         elif experiment in ['num_heads']:
             data_key = data_key2
             head_key = "model.sequence_mixer.kwargs.num_heads"        
+            df[f"{head_key}"] = df[f"{head_key}"].fillna(1)
             df['model_name'] = df[f'{model_key1}'].astype(str) + df[f'{head_key}'].astype(str)
             model_key = 'model_name'
         else:
@@ -129,11 +136,19 @@ if __name__ == "__main__" :
         elif experiment in ['random', 'num_heads']:
             x_key = data_key
             x_lab = "Sequence Length"
+            try:
+                df[f"{data_key}"] = df[f"{data_key}"].fillna(df[f"{data_key1}"])
+            except:
+                pass
             df[f"{data_key}"] = df[f"{data_key}"].fillna(df[f"{data_key}"])
+            
         else:
             x_key = data_key
             x_lab = "Sequence Length"
-            df[f"{data_key1}"] = df[f"{data_key1}"].fillna(df[f"{data_key2}"])
+            try:
+                df[f"{data_key1}"] = df[f"{data_key1}"].fillna(df[f"{data_key2}"])
+            except:
+                pass
 
         plot(df=df, max_seq_len=1024, data_key=x_key, model_key=model_key, x_lab=x_lab)
         print(f"Length of DF = {len(df)}")
