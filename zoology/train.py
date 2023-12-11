@@ -146,6 +146,10 @@ class Trainer:
             if (self.early_stopping_metric is not None) and metrics[
                 self.early_stopping_metric
             ] > self.early_stopping_threshold:
+                print(
+                    f"Early stopping triggered at epoch {epoch_idx} with "
+                    f"{self.early_stopping_metric} {metrics[self.early_stopping_metric]} > {self.early_stopping_threshold}"
+                )
                 break
 
             self.scheduler.step()

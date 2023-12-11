@@ -146,9 +146,7 @@ def prepare_data(config: DataConfig) -> Tuple[DataLoader]:
             num_train_examples=config.num_train_examples,
             num_test_examples=config.num_test_examples,
             input_seq_len=config.input_seq_len,
-            
             seed=config.seed,
-            num_kv_pairs=config.num_kv_pairs,
         )
 
         if config.cache_dir is not None:
@@ -171,12 +169,6 @@ def prepare_data(config: DataConfig) -> Tuple[DataLoader]:
 
     return train_dl, test_dl
 
-
-def _shuffle(*ls):
-    l = list(zip(*ls))
-    random.shuffle(l)
-    return zip(*l)
-    
 def _get_cache_path(config: DataConfig):
     if config.cache_dir is None:
         return None

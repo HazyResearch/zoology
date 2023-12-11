@@ -5,7 +5,10 @@ _REQUIRED = [
     "numpy",
     "einops",
     "tqdm",
-    "pydantic>=2.0.0",
+    # TODO: remove this upper bound 
+    # currently, when using ray we get:
+    # "AttributeError: module 'pydantic._internal' has no attribute '_model_construction'"
+    "pydantic>=2.0.0,<2.5.0",
     "wandb",
 ]
 

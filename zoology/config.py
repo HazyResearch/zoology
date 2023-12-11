@@ -72,7 +72,6 @@ class DataConfig(BaseConfig):
     input_seq_len: int = 64
     vocab_size: int = 8_192
     batch_size: int = 32
-    num_kv_pairs: int = -1
     
     cache_dir: str = None
     caching: bool = True

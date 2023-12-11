@@ -1,11 +1,9 @@
 import math
 from functools import partial
-from collections import namedtuple
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchvision.ops import StochasticDepth
-from einops import rearrange
 
 from zoology.config import ModelConfig
 
