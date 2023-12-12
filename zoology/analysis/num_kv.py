@@ -74,7 +74,9 @@ if __name__ == "__main__" :
                 "default-2023-11-12-00-31-44",
                 "default-2023-11-13-00-31-15",
                 "default-2023-11-13-00-42-27",
+                
                 "default-2023-12-09-21-02-38",
+                "default-2023-12-12-04-47-47"
             ]
         elif experiment == 'random':
             launch_ids = [
@@ -100,6 +102,8 @@ if __name__ == "__main__" :
 
                 "default-2023-12-11-07-42-08",
                 "default-2023-12-11-17-50-00",
+                "default-2023-12-12-04-19-03",
+                "default-2023-12-12-04-18-50",
             ]
         
         df = fetch_wandb_runs(
