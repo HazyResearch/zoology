@@ -17,6 +17,7 @@ class BaseConv(nn.Module):
         kernel_size: Union[int, List[int]]=3,
         layer_idx: int=None,
         implicit_long_conv: bool=True,
+        use_act=False,
         **kwargs
     ):
         super().__init__()
@@ -26,6 +27,8 @@ class BaseConv(nn.Module):
         self.layer_idx=layer_idx
 
         self.projection = nn.Linear(self.d_model,  self.d_model)
+        if self.use_act:
+            self.act = nn.SiLU() 
         
         # support for different kernel sizes per layer
         if isinstance(kernel_size, List):
@@ -49,5 +52,8 @@ class BaseConv(nn.Module):
         """
         u_conv = self.conv(u)
         u_proj = self.projection(u)
-        y = u_conv * u_proj
+        if self.use_act:
+            y = self.act(u_conv) * self.act(u_proj)
+        else:
+            y = u_conv * u_proj
         return y + u
