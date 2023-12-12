@@ -173,5 +173,15 @@ When you launch an experiment with this configuration, the `my_data_builder` fun
 
 This repo is being developed by members of the HazyResearch group. 
 
+If you use this codebase, or otherwise found our work valuable, please cite:
+```
+@article{zoology2023,
+  title={Zoology: Measuring and Improving Recall in Efficient Language Models},
+  author={Arora, Simran and Eyuboglu, Sabri and Timalsina, Aman and Johnson, Isys and Poli, Michael and Zou, James and Rudra, Atri and Ré, Christopher},
+  journal={	arXiv:2312.04927},
+  year={2023}
+}
+```
+
 
 
