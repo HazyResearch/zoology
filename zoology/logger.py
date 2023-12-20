@@ -8,9 +8,10 @@ from zoology.config import LoggerConfig, TrainConfig
 class WandbLogger:
     def __init__(self, config: TrainConfig):
         if config.logger.project_name is None or config.logger.entity is None:
+            print("No logger specified, skipping...")
             self.no_logger = True
             return
-
+        self.no_logger = False
         self.run = wandb.init(
             name=config.run_id,
             entity=config.logger.entity,

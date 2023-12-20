@@ -27,6 +27,7 @@ class BaseConv(nn.Module):
         self.layer_idx=layer_idx
 
         self.projection = nn.Linear(self.d_model,  self.d_model)
+        self.use_act = use_act
         if self.use_act:
             self.act = nn.SiLU() 
         

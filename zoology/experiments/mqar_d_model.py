@@ -1,6 +1,6 @@
 import uuid
 import numpy as np
-from zoology.config import TrainConfig, ModelConfig, DataConfig
+from zoology.config import TrainConfig, ModelConfig, DataConfig, LoggerConfig
 
 
 sweep_id = uuid.uuid4().hex[:6]
@@ -97,48 +97,32 @@ for input_seq_len, num_kv_pairs in [
                         "head_dim": 2
                     }
                 ),
-                "based": [
-                    dict(
-                        name="zoology.mixers.base_conv.BaseConv",
-                        kwargs={
-                            "l_max": input_seq_len,
-                            # pass a list of kernel sizes for each of four layers
-                            "kernel_size": 3,
-                            "implicit_long_conv": True,
-                        }
-                    ),
-                    dict(
-                        name="zoology.mixers.based.Based",
-                        kwargs={
-                            "l_max": input_seq_len,
-                            "feature_dim": 8,
-                            "num_key_value_heads": 1,
-                            "num_heads": 1,
-                            "feature_name": "taylor_exp"
-                        }
-                    )
-                ],
-                "based_no_taylor": [
-                    dict(
-                        name="zoology.mixers.base_conv.BaseConv",
-                        kwargs={
-                            "l_max": input_seq_len,
-                            # pass a list of kernel sizes for each of four layers
-                            "kernel_size": 3,
-                            "implicit_long_conv": True
-                        }
-                    ),
-                    dict(
-                        name="zoology.mixers.based.Based",
-                        kwargs={
-                            "l_max": input_seq_len,
-                            "feature_dim": d_model,
-                            "num_key_value_heads": 1,
-                            "num_heads": 1,
-                            "feature_name": "none"
-                        }
-                    )
-                ],
+                "based": dict(
+                    name="zoology.mixers.hybrid.Hybrid",
+                    kwargs={
+                        "configs": [
+                            dict(
+                                name="zoology.mixers.base_conv.BaseConv",
+                                kwargs={
+                                    "l_max": input_seq_len,
+                                    # pass a list of kernel sizes for each of four layers
+                                    "kernel_size": 3,
+                                    "implicit_long_conv": True,
+                                }
+                            ),
+                            dict(
+                                name="zoology.mixers.based.Based",
+                                kwargs={
+                                    "l_max": input_seq_len,
+                                    "feature_dim": 8,
+                                    "num_key_value_heads": 1,
+                                    "num_heads": 1,
+                                    "feature_name": "taylor_exp"
+                                }
+                            )
+                        ]
+                    }
+                ),
                 "mamba": dict(
                     name="zoology.mixers.mamba.Mamba",
                     kwargs={}
@@ -154,7 +138,6 @@ for input_seq_len, num_kv_pairs in [
                 # "h3"
                 # "base_conv_explicit"
                 "based",
-                "based_no_taylor"
                 # "mamba"
             ]:
 
@@ -174,9 +157,14 @@ for input_seq_len, num_kv_pairs in [
                 )
                 config = TrainConfig(
                     model=model,
-                    data=[data],
+                    data=data,
                     learning_rate=lr,
                     max_epochs=64,
-                    run_id=f"{sequence_mixer}-seqlen{input_seq_len}-dmodel{d_model}-lr{lr}-kv{num_kv_pairs}"
+                    run_id=f"{sequence_mixer}-seqlen{input_seq_len}-dmodel{d_model}-lr{lr}-kv{num_kv_pairs}",
+                    logger=LoggerConfig(
+                        project_name="zoology",
+                        entity="hazy-research"
+                    )
+
                 )
                 configs.append(config)
