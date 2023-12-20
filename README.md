@@ -26,9 +26,9 @@ Zoology provides machine learning researchers with a simple playground for under
 ```bash
 git clone https://github.com/HazyResearch/zoology.git
 cd zoology
-pip install -e . 
+pip install -e .[extra,analysis] 
 ```
-We want to keep this install as lightweight as possible; the only required dependencies are: `torch, einops, tqdm, pydantic, wandb`. There is some extra functionality (*e.g.* launching sweeps in parallel with Ray) that require additional dependencies. To install these, run `pip install -e .[extra,analysis]`.
+If you want to keep this install as lightweight as possible; the only required dependencies are: `torch, einops, tqdm, pydantic, wandb`. There is some extra functionality (*e.g.* launching sweeps in parallel with Ray) that require additional dependencies. To install without the optional dependencies, run `pip install -e .`.
 
 Then, try running an example experiments with: 
 ```
@@ -77,9 +77,9 @@ fn(torch.tensor([2,4,3])) # [4, 3, 2]
 config = TrainConfig(...)
 configs = [config]
 ```
-See [`zoology/experiments/examples/basic_ar.py`](zoology/experiments/examples/basic_ar.py) for an example. 
+See [`zoology/experiments/examples/basic.py`](zoology/experiments/examples/basic.py) for an example. 
 
-Then run `python -m zoology.launch zoology/experiments/examples/basic_ar.py`, replacing `basic_ar.py` with the path to your experiment. This will launch a single training job. 
+Then run `python -m zoology.launch zoology/experiments/examples/basic.py`, replacing `basic.py` with the path to your experiment. This will launch a single training job. 
 
 
 *Launching sweeps.* To launch a sweep, simply add more configuration objects to the `configs` list. For example, here's the content of [`zoology/experiments/examples/basic_sweep.py`](zoology/experiments/examples/basic_sweep.py):
