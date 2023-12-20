@@ -17,6 +17,8 @@ Zoology provides machine learning researchers with a simple playground for under
 
 *Is Zoology a good fit for your use case?* If you are looking to actually train a large machine learning model, Zoology's training harness (which is optimized for simplicity) is certainly not a good fit. For our language model research, we've found the [GPT-NeoX](https://github.com/EleutherAI/gpt-neox) useful for this. That being said, you might still want to use some of Zoology's layer implementations or maybe even mix the synthetic tasks into your training distribution. 
 
+*I want to explore the Based architecture. How should I get started?* Follow along the Getting Started and Configuration settings. Once you know how to launch a sweep, we can turn our attention to [this experiment file](https://github.com/HazyResearch/zoology/blob/main/zoology/experiments/mqar_d_model.py). You can [toggle the sequence mixers here](https://github.com/HazyResearch/zoology/blob/dd43c72fe455fedf283cd73e037addc0e0d3be03/zoology/experiments/mqar_d_model.py#L156) to launch synthetic experiments with Based. Recall that Based is an architecture with a gated convolution layer and a linear attention layer. You can [see here](https://github.com/HazyResearch/zoology/blob/dd43c72fe455fedf283cd73e037addc0e0d3be03/zoology/experiments/mqar_d_model.py#L100) how we will be initializing a 2-layer model, one layer of each type, for training in these experiments. More to come for Based soon!
+
 ## Getting started
 
 **Installation.** First, ensure you have torch installed, or install it following the instructions [here](https://pytorch.org/get-started/locally/). Then, install Zoology with:
