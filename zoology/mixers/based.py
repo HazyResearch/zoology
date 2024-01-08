@@ -69,11 +69,11 @@ class TaylorExp(FeatureMap):
         -> Assume x.shape is (batch_size, n_heads, seq_len, head_dim)
         """
         # Slow but memory-saving way to compute 2nd-order terms; how do w/o outer-product first?
-        x2  = oe.contract('...m,...n->...mn', x, x) / self.input_dim
+        x2  = oe.contract('...m,...n->...mn', x, x) / self.rd
         x2d = torch.diagonal(x2, dim1=-2, dim2=-1) / self.r2
         x2  = x2[..., self.tril_indices[0], self.tril_indices[1]]
         x   = torch.cat([torch.ones(x[..., :1].shape).to(x.device), 
-                         x / self.rd, x2d, x2], dim=-1)
+                         x / self.rrd, x2d, x2], dim=-1)
         return x 
 
 
