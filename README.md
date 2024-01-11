@@ -46,8 +46,9 @@ If you have access to multiple GPUs, you can run the sweep in parallel by adding
  
  The main synthetic data results in our work are summarized in Figure 2. The x-axis is the model dimension and the y-axis is accuracy on Mqar. Increasing the sequence
 length correlates with increased task difficulty. The results shown are the maximum performance for each model over four learning rates.
-
+<div align="center" >
     <img src="assets/figure2.png" height=150 alt="Figure 2" style="margin-bottom:px"/> 
+</div>
 
 To reproduce these results, ensure you have WandB setup to log all the results and then run the command:
 ```
