@@ -136,7 +136,7 @@ def _ar(
     inputs[:, 0:context_size] = kvs
 
     # create a matrix of indices, which is needed to index correctly below 
-    rows = np.tile(np.arange(num_examples), (3, 1)).T  
+    rows = np.tile(np.arange(num_examples), (num_queries, 1)).T  
 
     # sample random kv pairs to use for the queries
     kv_idx_choices = np.arange(0, num_kv_pairs)
@@ -154,7 +154,7 @@ def _ar(
     inputs[rows, query_pos] = queries
     targets[rows, query_pos] = labels
 
-    inputs, targets = torch.tensor(inputs[:, :-1]), torch.tensor(targets[:, 1:])
+    inputs, targets = torch.tensor(inputs), torch.tensor(targets)
     
     # replace all the 0 with random values
     if random_non_queries:
