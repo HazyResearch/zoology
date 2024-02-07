@@ -17,10 +17,10 @@ class WandbLogger:
             entity=config.logger.entity,
             project=config.logger.project_name, 
         )
-        wandb.run.log_code(
-            root=str(Path(__file__).parent.parent),
-            include_fn=lambda path, root: path.endswith(".py")
-        )
+        # wandb.run.log_code(
+        #     root=str(Path(__file__).parent.parent),
+        #     include_fn=lambda path, root: path.endswith(".py")
+        # )
 
     def log_config(self, config: TrainConfig):
         if self.no_logger:

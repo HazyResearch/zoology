@@ -1,11 +1,13 @@
 import argparse
 from datetime import datetime
 from functools import partial
+from typing import Tuple, Union
 
 from pydantic import BaseModel
 
 
 from zoology.utils import import_from_str
+
 
 class BaseConfig(BaseModel):
     @classmethod
@@ -71,7 +73,9 @@ class DataConfig(BaseConfig):
     num_test_examples: int = 1000
     input_seq_len: int = 64
     vocab_size: int = 8_192
-    batch_size: int = 32
+
+    # can pass a tuple if you want a different batch size for train and test
+    batch_size: Union[int, Tuple[int, int]] = 32
     
     cache_dir: str = None
     caching: bool = True

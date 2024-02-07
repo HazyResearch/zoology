@@ -276,7 +276,8 @@ def _mqar(
     seed: int,
     power_a: float=0.01,
     num_kv_pairs: int=8,
-    random_non_queries: bool=True
+    random_non_queries: bool=True,
+    **kwargs
 ):
     assert input_seq_len % 2 == 0, "input_seq_len must be even"
     assert vocab_size > input_seq_len

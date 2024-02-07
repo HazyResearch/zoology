@@ -32,3 +32,6 @@ class Hybrid(nn.Module):
             y: (b, l, d) tensor
         """
         return  self.mixer(u, *args, **kwargs)
+
+    def state_size(self, **kwargs):
+        return self.mixer.state_size()

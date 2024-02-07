@@ -66,3 +66,6 @@ class MHA(nn.Module):
         context = self.inner_attn(qkv)
         out = self.out_proj(rearrange(context, "... h d -> ... (h d)"))
         return out
+    
+    def state_size(self, batch_size: int=1, sequence_length: int=2048):
+        return 2 * self.d_model * sequence_length

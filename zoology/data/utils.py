@@ -8,7 +8,7 @@ import numpy as np
 
 import torch 
 from tqdm import tqdm
-from torch.utils.data import TensorDataset, DataLoader
+from torch.utils.data import TensorDataset, DataLoader, Dataset
 
 from zoology.config import DataConfig
 
@@ -35,11 +35,13 @@ class SyntheticData:
     test_inputs: torch.Tensor
     test_labels: torch.Tensor
 
+
     def check_shapes(
         self,
         num_train_examples: int,
         num_test_examples: int,
         input_seq_len: int,
+        test_input_seq_len: int = None
     ):
         """Check that the shapes are correct
         this is useful to catch bugs in the data generation code because
@@ -65,6 +67,21 @@ class SyntheticData:
                 f"test_labels shape is {self.test_labels.shape} but should be {(num_test_examples, input_seq_len)}"
             )
 
+    def dataloaders(self, batch_size: int, **kwargs):
+        train_dl = DataLoader(
+            TensorDataset(self.train_inputs, self.train_labels),
+            batch_size=batch_size,
+            num_workers=0,
+            shuffle=True,
+        )
+        test_dl = DataLoader(
+            TensorDataset(self.test_inputs, self.test_labels),
+            batch_size=batch_size,
+            num_workers=0,
+            shuffle=True,
+        )
+        return train_dl, test_dl
+    
 def builder_from_single(single_fn: callable):
     def _build_from_single(
         num_train_examples: int,
@@ -132,7 +149,7 @@ def prepare_data(config: DataConfig) -> Tuple[DataLoader]:
         MAX_RETRIES = 10
         for _ in range(MAX_RETRIES):
             try:
-                data = SyntheticData(**torch.load(cache_path))
+                data = MultiSyntheticData(**torch.load(cache_path))
                 break
             except RuntimeError as e:
                 print(e)
@@ -153,19 +170,7 @@ def prepare_data(config: DataConfig) -> Tuple[DataLoader]:
             print(f"Saving dataset to on-disk cache at {cache_path}...") 
             torch.save(asdict(data), cache_path)
 
-    
-    train_dl = DataLoader(
-        TensorDataset(data.train_inputs, data.train_labels),
-        batch_size=config.batch_size,
-        num_workers=0,
-        shuffle=True,
-    )
-    test_dl = DataLoader(
-        TensorDataset(data.test_inputs, data.test_labels),
-        batch_size=config.batch_size,
-        num_workers=0,
-        shuffle=True,
-    )
+    train_dl, test_dl = data.dataloaders(batch_size=config.batch_size)
 
     return train_dl, test_dl
 
@@ -180,3 +185,60 @@ def _get_cache_path(config: DataConfig):
         config.cache_dir,
         f"data_{config_hash}.pt",
     )
+
+
+
+@dataclass
+class SyntheticDataSection:
+    inputs: torch.Tensor
+    labels: torch.Tensor
+    slices: List[dict]
+
+    def __len__(self):
+        assert len(self.inputs) == len(self.labels) 
+        assert len(self.inputs) == len(self.slices)
+        return len(self.inputs)
+
+class MultiSyntheticDataset(Dataset):
+    """Simple dataclass which specifies the format that should be returned by
+    the synthetic data generators.
+    """
+    def __init__(self, sections: List[SyntheticDataSection], batch_size: int):
+        self.sections = sections
+        self.batch_size = batch_size        
+        self.batches = [
+            (section_idx, batch_start)
+            for section_idx, section in enumerate(self.sections)
+            for batch_start in range(0, len(section), self.batch_size)
+        ]
+
+    
+    def __getitem__(self, batch_idx: int):
+        section_idx, batch_start = self.batches[batch_idx]
+        section = self.sections[section_idx]
+        slc = slice(batch_start, batch_start + self.batch_size)
+        return section.inputs[slc], section.labels[slc], section.slices[slc]        
+
+    def __len__(self):
+        return len(self.batches)
+
+
+@dataclass
+class MultiSyntheticData:
+    train: List[SyntheticDataSection] 
+    test: List[SyntheticDataSection]
+    
+    def dataloaders(self, batch_size: int, **kwargs):
+        if isinstance(batch_size, int):
+            batch_size = (batch_size, batch_size)
+        return (
+            DataLoader(
+                MultiSyntheticDataset(getattr(self, split), batch_size=bs),
+                batch_size=None, 
+                num_workers=0, 
+                shuffle=False,
+            )
+            for split, bs in zip(["train", "test"], batch_size)
+        )
+   
+
