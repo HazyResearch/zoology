@@ -130,10 +130,10 @@ class Trainer:
             }
 
             # compute metrics for slices
-            for key in ["num_kv_pairs"]:
-                acc_by_slice = results.groupby(key)["accuracy"].mean()
-                for value, accuracy in acc_by_slice.items():
-                    metrics[f"valid/{key}/accuracy-{value}"] = accuracy
+            # for key in ["num_kv_pairs"]:
+            #     acc_by_slice = results.groupby(key)["accuracy"].mean()
+            #     for value, accuracy in acc_by_slice.items():
+            #         metrics[f"valid/{key}/accuracy-{value}"] = accuracy
             iterator.set_postfix(metrics)
             self.logger.log({"epoch": epoch_idx, **metrics})
         return metrics

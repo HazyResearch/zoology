@@ -2,7 +2,7 @@
 import numpy as np
 import torch
 
-from .utils import SyntheticData, builder_from_single
+from .utils import DataSegment, builder_from_single
 
 
 def associative_recall(
@@ -54,7 +54,7 @@ def associative_recall(
         Warning: If potential data leakage is detected between the train and test sets.
     """
 
-    train_inputs, train_labels = _ar(
+    train = _ar(
         vocab_size=vocab_size,
         num_examples=num_train_examples,
         input_seq_len=input_seq_len,
@@ -63,7 +63,7 @@ def associative_recall(
         num_queries=num_queries,
         random_non_queries=random_non_queries
     )
-    test_inputs, test_labels = _ar(
+    test = _ar(
         vocab_size=vocab_size,
         num_examples=num_test_examples,
         input_seq_len=input_seq_len,
@@ -163,113 +163,113 @@ def _ar(
     return inputs, targets
 
 
-def multiquery_ar(
-    vocab_size: int=8_192,
-    num_train_examples: int=100_000,
-    num_test_examples: int=3_000,
-    input_seq_len: int=64,
-    num_kv_pairs: int=4,
-    train_power_a: float=0.01,
-    test_power_a: float=0.01,
-    random_non_queries: bool=True,
-    seed: int=0,
-) -> SyntheticData:
-    """
-    Generates synthetic data for the multi-query associative recall task as described in
-    Arora,Eyuboglu, et al. "Zoology: Measuring and improving recall in efficient language models.".
+# def multiquery_ar(
+#     vocab_size: int=8_192,
+#     num_train_examples: int=100_000,
+#     num_test_examples: int=3_000,
+#     input_seq_len: int=64,
+#     num_kv_pairs: int=4,
+#     train_power_a: float=0.01,
+#     test_power_a: float=0.01,
+#     random_non_queries: bool=True,
+#     seed: int=0,
+# ) -> SyntheticData:
+#     """
+#     Generates synthetic data for the multi-query associative recall task as described in
+#     Arora,Eyuboglu, et al. "Zoology: Measuring and improving recall in efficient language models.".
 
-    Example: 
-        `multiquery_ar(vocab_size=12, num_kv_pairs=2, input_seq_len=16, random_non_queries=False)` 
-        will generate input and label sequences of the form: 
+#     Example: 
+#         `multiquery_ar(vocab_size=12, num_kv_pairs=2, input_seq_len=16, random_non_queries=False)` 
+#         will generate input and label sequences of the form: 
                 
-                Key   Val  Key  Val            Query                         Query
-        Inputs: 2     8    4    7    0    0    4    0    0    0    0    0    2    0    0 
-        Labels: -100 -100 -100 -100 -100 -100  7    -100 -100 -100 -100 -100 8    -100 -100
+#                 Key   Val  Key  Val            Query                         Query
+#         Inputs: 2     8    4    7    0    0    4    0    0    0    0    0    2    0    0 
+#         Labels: -100 -100 -100 -100 -100 -100  7    -100 -100 -100 -100 -100 8    -100 -100
 
-        The -100 labels are ignored by the loss function and metrics.
+#         The -100 labels are ignored by the loss function and metrics.
     
-    We include one important note on the power law distribution. In real language data, 
-    the gap between repeated bigrams follows a power law. Intuitively, if the bigram
-    "common buzzard" appears in text, the probability of the bigram appearing again 
-    drops the further away from the orginal mention we are. In our synthetic, we can 
-    control this with the power law parameters `train_power_a` and `test_power_a`. 
-    Setting these to 1.0 will result in a uniform distribution. You can visualize the
-    distribution with the following code:
-    ```
-    space = 100
-    power_a = 0.01  
-    p = power_a * np.arange(1, space + 1) ** (power_a-1)
-    p = p / p.sum()
-    plt.plot(p)
-    ```
+#     We include one important note on the power law distribution. In real language data, 
+#     the gap between repeated bigrams follows a power law. Intuitively, if the bigram
+#     "common buzzard" appears in text, the probability of the bigram appearing again 
+#     drops the further away from the orginal mention we are. In our synthetic, we can 
+#     control this with the power law parameters `train_power_a` and `test_power_a`. 
+#     Setting these to 1.0 will result in a uniform distribution. You can visualize the
+#     distribution with the following code:
+#     ```
+#     space = 100
+#     power_a = 0.01  
+#     p = power_a * np.arange(1, space + 1) ** (power_a-1)
+#     p = p / p.sum()
+#     plt.plot(p)
+#     ```
 
-    Args:
-        vocab_size (int): The size of the vocabulary. As discussed in the Zoology 
-            paper, large vocabulary sizes (>1k) can be important for highlighting 
-            differences between model architectures. Defaults to 8_192.
-        num_train_examples (int): The number of training examples to generate. Defaults 
-            to 100_000.
-        num_test_examples (int): The number of test examples to generate. Defaults to 
-            3_000.
-        input_seq_len (int): The length of the input sequence. Defaults to 64. In 
-            In Figure 2 of the Zoology paper, we vary the input sequence length from 
-            64 to 512 and the number of key-value pairs from 4 to 64.
-        seed (int): The seed for the random number generator.
-        num_kv_pairs (int): The number of key-value pairs.
-        train_power_a (float, optional): The power for the power law distribution for 
-            training data. Defaults to 0.01.
-        test_power_a (float, optional): The power for the power law distribution for 
-            test data. Defaults to 0.01.
-        random_non_queries (bool, optional): If True, replace all the 0's (as in the 
-            example above) with random values in the input. Defaults to True.
+#     Args:
+#         vocab_size (int): The size of the vocabulary. As discussed in the Zoology 
+#             paper, large vocabulary sizes (>1k) can be important for highlighting 
+#             differences between model architectures. Defaults to 8_192.
+#         num_train_examples (int): The number of training examples to generate. Defaults 
+#             to 100_000.
+#         num_test_examples (int): The number of test examples to generate. Defaults to 
+#             3_000.
+#         input_seq_len (int): The length of the input sequence. Defaults to 64. In 
+#             In Figure 2 of the Zoology paper, we vary the input sequence length from 
+#             64 to 512 and the number of key-value pairs from 4 to 64.
+#         seed (int): The seed for the random number generator.
+#         num_kv_pairs (int): The number of key-value pairs.
+#         train_power_a (float, optional): The power for the power law distribution for 
+#             training data. Defaults to 0.01.
+#         test_power_a (float, optional): The power for the power law distribution for 
+#             test data. Defaults to 0.01.
+#         random_non_queries (bool, optional): If True, replace all the 0's (as in the 
+#             example above) with random values in the input. Defaults to True.
 
-    Returns:
-        SyntheticData: A SyntheticData object containing the generated train and test 
-            inputs and labels.
+#     Returns:
+#         SyntheticData: A SyntheticData object containing the generated train and test 
+#             inputs and labels.
 
-    Raises:
-        Warning: If potential data leakage is detected between the train and test sets.
-    """
+#     Raises:
+#         Warning: If potential data leakage is detected between the train and test sets.
+#     """
 
-    train_inputs, train_labels = _mqar(
-        vocab_size=vocab_size,
-        num_examples=num_train_examples,
-        input_seq_len=input_seq_len,
-        seed=seed,
-        power_a=train_power_a,
-        num_kv_pairs=num_kv_pairs,
-        random_non_queries=random_non_queries
-    )
-    test_inputs, test_labels = _mqar(
-        vocab_size=vocab_size,
-        num_examples=num_test_examples,
-        input_seq_len=input_seq_len,
-        seed=seed + 10,  # different seed for test set
-        power_a=test_power_a,
-        num_kv_pairs=num_kv_pairs,
-        random_non_queries=random_non_queries
-    )
+#     train_inputs, train_labels = _mqar(
+#         vocab_size=vocab_size,
+#         num_examples=num_train_examples,
+#         input_seq_len=input_seq_len,
+#         seed=seed,
+#         power_a=train_power_a,
+#         num_kv_pairs=num_kv_pairs,
+#         random_non_queries=random_non_queries
+#     )
+#     test_inputs, test_labels = _mqar(
+#         vocab_size=vocab_size,
+#         num_examples=num_test_examples,
+#         input_seq_len=input_seq_len,
+#         seed=seed + 10,  # different seed for test set
+#         power_a=test_power_a,
+#         num_kv_pairs=num_kv_pairs,
+#         random_non_queries=random_non_queries
+#     )
 
-    data = SyntheticData(
-        train_inputs=train_inputs,
-        train_labels=train_labels,
-        test_inputs=test_inputs,
-        test_labels=test_labels,
-    )
+#     data = SyntheticData(
+#         train_inputs=train_inputs,
+#         train_labels=train_labels,
+#         test_inputs=test_inputs,
+#         test_labels=test_labels,
+#     )
 
-    # check for data leakage:
-    train_set = set([" ".join(map(str, x)) for x in data.train_inputs.tolist()])
-    test_set = set([" ".join(map(str, x)) for x in data.test_inputs.tolist()])
-    frac_test_in_train = 1 - (len(test_set - train_set) / len(test_set))
-    if frac_test_in_train > 0.001:
-        print(
-            "WARNING: Potential data leakage detected. " 
-            f"{frac_test_in_train: 0.2f} of test examples are in the train set."
-        )
-    return data
+#     # check for data leakage:
+#     train_set = set([" ".join(map(str, x)) for x in data.train_inputs.tolist()])
+#     test_set = set([" ".join(map(str, x)) for x in data.test_inputs.tolist()])
+#     frac_test_in_train = 1 - (len(test_set - train_set) / len(test_set))
+#     if frac_test_in_train > 0.001:
+#         print(
+#             "WARNING: Potential data leakage detected. " 
+#             f"{frac_test_in_train: 0.2f} of test examples are in the train set."
+#         )
+#     return data
 
 
-def _mqar(
+def multiquery_ar(
     vocab_size: int,
     num_examples: int,
     input_seq_len: int,
@@ -278,7 +278,7 @@ def _mqar(
     num_kv_pairs: int=8,
     random_non_queries: bool=True,
     **kwargs
-):
+) -> DataSegment:
     assert input_seq_len % 2 == 0, "input_seq_len must be even"
     assert vocab_size > input_seq_len
     assert num_kv_pairs * 4 <= input_seq_len
@@ -328,7 +328,7 @@ def _mqar(
     # replace all the 0 with random values
     if random_non_queries:
         inputs[inputs == 0] = torch.randint(vocab_size, size=inputs.shape)[inputs == 0]
-    return inputs, labels
+    return DataSegment(inputs, labels, slices=None)
 
 
     

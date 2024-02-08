@@ -32,7 +32,6 @@ test_configs = [
 ]
 
 
-synthetic_data = DataConfig
 input_seq_len=max([c.input_seq_len for c in train_configs + test_configs])
 batch_size = 256
 data = DataConfig(

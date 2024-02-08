@@ -5,7 +5,7 @@ import numpy as np
 import torch
 from pydantic import BaseModel
 
-from .utils import MultiSyntheticData, SyntheticDataSection
+from .utils import SyntheticDataSection
 from .associative_recall import _mqar, _ar
 
 class ARConfig(BaseModel):
@@ -24,7 +24,7 @@ def ar_extrapolate(
     num_test_examples: int=3_000,
     input_seq_len: int=64,
     seed: int=0,
-) -> MultiSyntheticData:
+) -> SyntheticDataSection:
     
     # input seq len should be the max for all the configs
     assert input_seq_len == max([c.input_seq_len for c in train_configs + test_configs])

@@ -1,6 +1,6 @@
 import uuid
 import numpy as np
-from zoology.config import TrainConfig, ModelConfig, DataConfig, LoggerConfig
+from zoology.config import TrainConfig, ModelConfig, DataConfig, DataSegmentConfig, LoggerConfig
 
 
 sweep_id = uuid.uuid4().hex[:6]
@@ -26,22 +26,23 @@ for input_seq_len, num_kv_pairs in [
     else:
         batch_size = 512
 
+    builder={
+        "name": "zoology.data.associative_recall.multiquery_ar",
+        "kwargs": {
+            "num_kv_pairs": num_kv_pairs,
+            "train_power_a": 0.01,
+            "test_power_a": 0.01,
+            "random_non_queries": False
+        }
+    }   
+
     data = DataConfig(
-        num_train_examples=100_000,
-        num_test_examples=3_000,
+        train_configs=[DataSegmentConfig(num_examples=100_000, builder=builder)],
+        test_configs=[DataSegmentConfig(num_examples=3_000, builder=builder)],
         vocab_size=VOCAB_SIZE,
         input_seq_len=input_seq_len,
         batch_size=batch_size,
-        # cache_dir="", # TODO: add a directory to cache your results!
-        builder={
-            "name": "zoology.data.associative_recall.multiquery_ar",
-            "kwargs": {
-                "num_kv_pairs": num_kv_pairs,
-                "train_power_a": 0.01,
-                "test_power_a": 0.01,
-                "random_non_queries": False
-            }
-        }   
+        # cache_dir="", # TODO: add a directory to cache your data!
     )
 
     for d_model in [

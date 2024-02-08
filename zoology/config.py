@@ -1,7 +1,7 @@
 import argparse
 from datetime import datetime
 from functools import partial
-from typing import Tuple, Union
+from typing import List, Tuple, Union
 
 from pydantic import BaseModel
 
@@ -64,19 +64,21 @@ class ModuleConfig(BaseConfig):
     def instantiate(self, **kwargs):
         return import_from_str(self.name)(**kwargs, **self.kwargs)
 
+class DataSegmentConfig(BaseConfig):
+    vocab_size: int = 8_192
+    num_examples: int = 1_000
+    input_seq_len: int = 64
+    builder: FunctionConfig = None
 
 class DataConfig(BaseConfig):
-    builder: FunctionConfig = None
-    seed: int = 0
-
-    num_train_examples: int = 10_000
-    num_test_examples: int = 1000
-    input_seq_len: int = 64
-    vocab_size: int = 8_192
+    train_configs: List[DataSegmentConfig]
+    test_configs: List[DataSegmentConfig]
 
     # can pass a tuple if you want a different batch size for train and test
     batch_size: Union[int, Tuple[int, int]] = 32
-    
+
+    seed: int = 123
+
     cache_dir: str = None
     caching: bool = True
     force_cache: bool = False 
@@ -109,8 +111,8 @@ class LoggerConfig(BaseConfig):
     
 
 class TrainConfig(BaseConfig):
-    data: DataConfig = DataConfig()
-    model: ModelConfig = ModelConfig()
+    data: DataConfig
+    model: ModelConfig
     logger: LoggerConfig = LoggerConfig()
 
     max_epochs: int = 100
@@ -127,5 +129,3 @@ class TrainConfig(BaseConfig):
     launch_id: str = None
     sweep_id: str = None
     run_id: str = "default"
-
-
