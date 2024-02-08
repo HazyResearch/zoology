@@ -38,9 +38,10 @@ T_MAX = 1024 # increase this if your ctx_len is long [NOTE: TAKES LOTS OF VRAM!]
 # # it's possible to go beyond CUDA limitations if you slice the ctx and pass the hidden state in each slice
 
 from torch.utils.cpp_extension import load
-wkv_cuda = load(name="wkv", sources=
-                ["/var/cr05_data/sim_data/code/petting-zoo/src/models/mixers/cuda/wkv_op.cpp", 
-                 "/var/cr05_data/sim_data/code/petting-zoo/src/models/mixers/cuda/wkv_cuda.cu"],
+dir_path = os.path.dirname(os.path.realpath(__file__))
+wkv_cuda = load(name="wkv", sources=[
+    os.path.join(dir_path, "./rwkv/v4/wkv_op.cpp"), 
+    os.path.join(dir_path, "./rwkv/v4/wkv_cuda.cu")],
                 verbose=True, extra_cuda_cflags=['-res-usage', '--maxrregcount 60', '--use_fast_math', '-O3', '-Xptxas -O3', f'-DTmax={T_MAX}'])
 
 class WKV(torch.autograd.Function):

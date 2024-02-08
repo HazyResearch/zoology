@@ -72,6 +72,12 @@ for input_seq_len, num_kv_pairs in [
                         "l_max": input_seq_len,
                     },
                 ),
+                "rwkv5": dict(
+                    name="zoology.mixers.rwkv5.RWKVTimeMixer",
+                    kwargs={
+                        "l_max": input_seq_len,
+                    },
+                ),
                 "base_conv": dict(
                     name="zoology.mixers.base_conv.BaseConv",
                     kwargs={

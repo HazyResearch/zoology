@@ -136,7 +136,7 @@ def _ar(
     inputs[:, 0:context_size] = kvs
 
     # create a matrix of indices, which is needed to index correctly below 
-    rows = np.tile(np.arange(num_examples), (3, 1)).T  
+    rows = np.tile(np.arange(num_examples), (num_queries, 1)).T  
 
     # sample random kv pairs to use for the queries
     kv_idx_choices = np.arange(0, num_kv_pairs)
