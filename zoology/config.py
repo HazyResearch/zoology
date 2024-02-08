@@ -65,11 +65,16 @@ class ModuleConfig(BaseConfig):
         return import_from_str(self.name)(**kwargs, **self.kwargs)
 
 class DataSegmentConfig(BaseConfig):
+    """
+    This class should be subclassed to define per task. For example, MQARConfig
+    """
     vocab_size: int = 8_192
     num_examples: int = 1_000
     input_seq_len: int = 64
-    builder: FunctionConfig = None
 
+    def build(self, **kwargs):
+        raise NotImplementedError()
+    
 class DataConfig(BaseConfig):
     train_configs: List[DataSegmentConfig]
     test_configs: List[DataSegmentConfig]
@@ -102,6 +107,7 @@ class ModelConfig(BaseConfig):
     pad_vocab_size_multiple: int = 1
 
     block_type: str = "TransformerBlock"
+    name: str = "default"
 
 class LoggerConfig(BaseConfig):
 

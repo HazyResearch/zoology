@@ -87,15 +87,8 @@ class DataSegment:
                     print(e)
         else:
             print(f"Generating dataset...") 
-            builder = config.builder.instantiate()
-
             # generate data
-            data: DataSegment = builder(
-                vocab_size=config.vocab_size,
-                num_examples=config.num_examples,
-                input_seq_len=config.input_seq_len,
-                seed=seed,
-            )
+            data: DataSegment = config.build(seed=seed)
 
             if cache_dir is not None:
                 print(f"Saving dataset to on-disk cache at {cache_path}...") 
@@ -114,14 +107,16 @@ def prepare_data(config: DataConfig) -> Tuple[DataLoader, DataLoader]:
     # the same seed for the train and test data segments.
     MAX_SEED = 2 ** 32
     np.random.seed(config.seed)
+    train_seeds = np.random.randint(0, MAX_SEED // 2, size=len(config.train_configs))
+    test_seeds = np.random.randint(MAX_SEED // 2, MAX_SEED, size=len(config.test_configs))
     factory_kwargs = {"cache_dir": config.cache_dir, "force_cache": config.force_cache}
     train_segments = _SyntheticDataset([
-        DataSegment.from_config(segment_config, seed=np.random.randint(0, MAX_SEED // 2), **factory_kwargs) 
-        for segment_config in config.train_configs
+        DataSegment.from_config(segment_config, seed=int(seed), **factory_kwargs)
+        for segment_config, seed in zip(config.train_configs, train_seeds)
     ], batch_size=train_batch_size)
     test_segments = _SyntheticDataset([
-        DataSegment.from_config(segment_config, seed=np.random.randint(MAX_SEED // 2, MAX_SEED), **factory_kwargs)
-        for segment_config in config.test_configs
+        DataSegment.from_config(segment_config, seed=int(seed), **factory_kwargs)
+        for segment_config, seed in zip(config.test_configs, test_seeds)
     ], batch_size=test_batch_size)
 
     return (

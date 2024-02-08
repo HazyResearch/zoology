@@ -1,6 +1,7 @@
 import uuid
 import numpy as np
 from zoology.config import TrainConfig, ModelConfig, DataConfig, DataSegmentConfig, LoggerConfig
+from zoology.data.associative_recall import MQARConfig
 
 
 sweep_id = uuid.uuid4().hex[:6]
@@ -26,29 +27,27 @@ for input_seq_len, num_kv_pairs in [
     else:
         batch_size = 512
 
-    builder={
-        "name": "zoology.data.associative_recall.multiquery_ar",
-        "kwargs": {
-            "num_kv_pairs": num_kv_pairs,
-            "train_power_a": 0.01,
-            "test_power_a": 0.01,
-            "random_non_queries": False
-        }
-    }   
+
+    factory_kwargs = {
+        "num_kv_pairs": num_kv_pairs,
+        "train_power_a": 0.01,
+        "test_power_a": 0.01,
+        "random_non_queries": False
+    }
 
     data = DataConfig(
-        train_configs=[DataSegmentConfig(num_examples=100_000, vocab_size=VOCAB_SIZE, input_seq_len=input_seq_len, builder=builder)],
-        test_configs=[DataSegmentConfig(num_examples=3_000, vocab_size=VOCAB_SIZE, input_seq_len=input_seq_len, builder=builder)],
+        train_configs=[MQARConfig(num_examples=100_000, vocab_size=VOCAB_SIZE, input_seq_len=input_seq_len, **factory_kwargs)],
+        test_configs=[MQARConfig(num_examples=3_000, vocab_size=VOCAB_SIZE, input_seq_len=input_seq_len, **factory_kwargs)],
         batch_size=batch_size,
-        cache_dir="/var/cr05_data/sabri_data/zoology"
+        cache_dir="/var/cr05_data/sabri_data/zoology",
         # cache_dir="", # TODO: add a directory to cache your data!
     )
 
     for d_model in [
-        64, 
+        # 64, 
         128, 
-        256, 
-        512
+        # 256, 
+        # 512
     ]:
         for lr in  np.logspace(-4, -2, 4):
             
@@ -122,12 +121,12 @@ for input_seq_len, num_kv_pairs in [
             }
 
             for sequence_mixer in [
-                # "attention",
-                # "hyena",
-                # "rwkv",
-                # "base_conv",
-                # "h3",
-                # "based",
+                "attention",
+                "hyena",
+                "rwkv",
+                "base_conv",
+                "h3",
+                "based",
                 "mamba"
             ]:
 

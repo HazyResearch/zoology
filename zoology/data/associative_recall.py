@@ -2,6 +2,7 @@
 import numpy as np
 import torch
 
+from ..config import DataSegmentConfig
 from .utils import DataSegment, builder_from_single
 
 
@@ -267,6 +268,15 @@ def _ar(
 #             f"{frac_test_in_train: 0.2f} of test examples are in the train set."
 #         )
 #     return data
+
+class MQARConfig(DataSegmentConfig):
+    name: str="multiquery_ar"
+    power_a: float=0.01
+    num_kv_pairs: int=8
+    random_non_queries: bool=True
+
+    def build(self, seed: int) -> DataSegment:
+        return multiquery_ar(**self.model_dump(), seed=seed)
 
 
 def multiquery_ar(
