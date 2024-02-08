@@ -37,11 +37,10 @@ for input_seq_len, num_kv_pairs in [
     }   
 
     data = DataConfig(
-        train_configs=[DataSegmentConfig(num_examples=100_000, builder=builder)],
-        test_configs=[DataSegmentConfig(num_examples=3_000, builder=builder)],
-        vocab_size=VOCAB_SIZE,
-        input_seq_len=input_seq_len,
+        train_configs=[DataSegmentConfig(num_examples=100_000, vocab_size=VOCAB_SIZE, input_seq_len=input_seq_len, builder=builder)],
+        test_configs=[DataSegmentConfig(num_examples=3_000, vocab_size=VOCAB_SIZE, input_seq_len=input_seq_len, builder=builder)],
         batch_size=batch_size,
+        cache_dir="/var/cr05_data/sabri_data/zoology"
         # cache_dir="", # TODO: add a directory to cache your data!
     )
 
@@ -109,7 +108,8 @@ for input_seq_len, num_kv_pairs in [
                                     "feature_dim": 8,
                                     "num_key_value_heads": 1,
                                     "num_heads": 1,
-                                    "feature_name": "taylor_exp"
+                                    "feature_name": "taylor_exp",
+                                    "train_view": "quadratic"
                                 }
                             )
                         ]
@@ -122,12 +122,12 @@ for input_seq_len, num_kv_pairs in [
             }
 
             for sequence_mixer in [
-                "attention",
-                "hyena",
-                "rwkv",
-                "base_conv",
-                "h3",
-                "based",
+                # "attention",
+                # "hyena",
+                # "rwkv",
+                # "base_conv",
+                # "h3",
+                # "based",
                 "mamba"
             ]:
 

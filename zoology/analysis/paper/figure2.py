@@ -15,19 +15,20 @@ def plot(
     df: pd.DataFrame,
     max_seq_len: int = 512,
 ):
-    
+    seq_len_key = "data.train_configs.0.input_seq_len"
+
     plot_df = df.groupby([
         "model.sequence_mixer.name",
         "model.d_model",
-        "data.input_seq_len",
+        seq_len_key
     ])["valid/accuracy"].max().reset_index()
+    breakpoint()
 
-    run_dir = "/var/cr05_data/sim_data/code/petting-zoo/"
     sns.set_theme(style="whitegrid")
     g = sns.relplot(
-        data=plot_df[plot_df["data.input_seq_len"] <= max_seq_len],
+        data=plot_df[plot_df[seq_len_key] <= max_seq_len],
         y="valid/accuracy",
-        col="data.input_seq_len",
+        col=seq_len_key,
         x="model.d_model",
         hue="model.sequence_mixer.name",
         kind="line",
@@ -55,17 +56,19 @@ def plot(
 if __name__ == "__main__" :
     df = fetch_wandb_runs(
         launch_id=[
-            "default-2023-10-25-22-20-38", 
-            "default-2023-10-26-19-09-31",
-            "default-2023-10-27-04-13-56",
-            "default-2023-10-29-17-31-26",
-            "default-2023-11-12-00-31-44",
-            "default-2023-11-13-00-31-15",
-            "default-2023-11-13-00-42-27"
+            # "default-2023-10-25-22-20-38", 
+            # "default-2023-10-26-19-09-31",
+            # "default-2023-10-27-04-13-56",
+            # "default-2023-10-29-17-31-26",
+            # "default-2023-11-12-00-31-44",
+            # "default-2023-11-13-00-31-15",
+            # "default-2023-11-13-00-42-27"
+
+            "default-2024-02-08-20-16-21"
         ], 
         project_name="zoology"
     )
 
-    df["data.input_seq_len"] = df["data.input_seq_len"].fillna(df["data.0.input_seq_len"])
+    # df["data.input_seq_len"] = df["data.input_seq_len"].fillna(df["data.0.input_seq_len"])
     plot(df=df, max_seq_len=1024)
     plt.savefig("results.pdf")
