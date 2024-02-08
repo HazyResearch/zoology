@@ -154,7 +154,7 @@ def _ar(
     inputs[rows, query_pos] = queries
     targets[rows, query_pos] = labels
 
-    inputs, targets = torch.tensor(inputs[:, :-1]), torch.tensor(targets[:, 1:])
+    inputs, targets = torch.tensor(inputs[:, :-1]), torch.tensor(targets[:, :-1])
     
     # replace all the 0 with random values
     if random_non_queries:
