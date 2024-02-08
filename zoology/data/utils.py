@@ -2,6 +2,7 @@ import os
 import hashlib
 from pathlib import Path
 import json
+import sys
 from dataclasses import dataclass, asdict
 from typing import Tuple, List, Union
 import numpy as np
@@ -31,6 +32,7 @@ class DataSegment:
         cls, 
         config: DataSegmentConfig,
         cache_dir: str = None,
+        force_cache: bool = False,
         seed: int = 123
     ):
         """
@@ -55,7 +57,7 @@ class DataSegment:
             if cache_dir is None:
                 return None
             config_hash = hashlib.md5(
-                json.dumps({**config.dump(), "_seed": seed}, sort_keys=True).encode()
+                json.dumps({**config.model_dump(), "_seed": seed}, sort_keys=True).encode()
             ).hexdigest()
 
             return os.path.join(
@@ -71,7 +73,7 @@ class DataSegment:
                 cache_dir = None
         cache_path = _get_cache_path(config)
         # check cache
-        if cache_dir is not None and os.path.exists(cache_path) and not config.force_cache:
+        if cache_dir is not None and os.path.exists(cache_path) and not force_cache:
             # load from cache
             print(f"Loading data from on-disk cache at {cache_path}...") 
             # SE 09-12-23: there's some sporadic issue in torch load that gives
@@ -108,14 +110,18 @@ def prepare_data(config: DataConfig) -> Tuple[DataLoader, DataLoader]:
     else:
         train_batch_size, test_batch_size = config.batch_size
     
+    # We set a different random seed for each data segment. We're careful to avoid using
+    # the same seed for the train and test data segments.
+    MAX_SEED = 2 ** 32
     np.random.seed(config.seed)
+    factory_kwargs = {"cache_dir": config.cache_dir, "force_cache": config.force_cache}
     train_segments = _SyntheticDataset([
-        DataSegment.from_config(config, seed=np.random.randint(0, 2**32)) 
-        for config in config.train_configs
+        DataSegment.from_config(segment_config, seed=np.random.randint(0, MAX_SEED // 2), **factory_kwargs) 
+        for segment_config in config.train_configs
     ], batch_size=train_batch_size)
     test_segments = _SyntheticDataset([
-        DataSegment.from_config(config, seed=np.random.randint(0, 2**32))
-        for config in config.test_configs
+        DataSegment.from_config(segment_config, seed=np.random.randint(MAX_SEED // 2, MAX_SEED), **factory_kwargs)
+        for segment_config in config.test_configs
     ], batch_size=test_batch_size)
 
     return (

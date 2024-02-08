@@ -80,7 +80,6 @@ class DataConfig(BaseConfig):
     seed: int = 123
 
     cache_dir: str = None
-    caching: bool = True
     force_cache: bool = False 
 
 class ModelConfig(BaseConfig):
