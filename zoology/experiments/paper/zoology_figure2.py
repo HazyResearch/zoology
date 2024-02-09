@@ -13,9 +13,9 @@ VOCAB_SIZE = 8_192
 
 configs = []
 for input_seq_len, num_kv_pairs in [
-    # (64, 4),
     (128, 8),
-    # (256, 16),
+    (64, 4),
+    (256, 16),
     # (512, 64),
 ]:
     if input_seq_len == 1024:

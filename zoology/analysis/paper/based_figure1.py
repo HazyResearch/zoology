@@ -54,7 +54,7 @@ def plot(
 if __name__ == "__main__" :
     df = fetch_wandb_runs(
         launch_id=[
-            "default-2024-02-09-03-56-41"
+            "default-2024-02-09-04-11-25"
         ], 
         project_name="zoology"
     )

@@ -78,7 +78,7 @@ for d_model in [64, 128]:
         name="attention",
         **model_factory_kwargs
     )
-    # models.append(model)
+    models.append(model)
 
 
 # based
@@ -212,7 +212,7 @@ for model in models:
             model=model,
             data=data,
             learning_rate=lr,
-            max_epochs=16,
+            max_epochs=32,
             logger=LoggerConfig(
                 project_name="zoology",
                 entity="hazy-research"

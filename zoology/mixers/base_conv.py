@@ -62,5 +62,5 @@ class BaseConv(nn.Module):
             y = u_conv * u_proj
         return y + u
 
-    def state_size(self):
-        return 0
+    def state_size(self, sequence_length: int):
+        return self.conv.state_size(sequence_length=sequence_length)
