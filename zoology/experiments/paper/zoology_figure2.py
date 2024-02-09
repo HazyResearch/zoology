@@ -13,10 +13,10 @@ VOCAB_SIZE = 8_192
 
 configs = []
 for input_seq_len, num_kv_pairs in [
-    (64, 4),
+    # (64, 4),
     (128, 8),
-    (256, 16),
-    (512, 64),
+    # (256, 16),
+    # (512, 64),
 ]:
     if input_seq_len == 1024:
         batch_size = 64
@@ -44,10 +44,10 @@ for input_seq_len, num_kv_pairs in [
     )
 
     for d_model in [
-        # 64, 
+        64, 
         128, 
-        # 256, 
-        # 512
+        256, 
+        512
     ]:
         for lr in  np.logspace(-4, -2, 4):
             

@@ -75,7 +75,128 @@ for d_model in [64, 128]:
         n_layers=2,
         sequence_mixer=mixer,
         max_position_embeddings=0,
-        name="attention-conv",
+        name="attention",
+        **model_factory_kwargs
+    )
+    # models.append(model)
+
+
+# based
+for d_model in [64, 128, 256]:
+    for ftr_dim in [16, 32, 64]:
+        lin_attn = dict(
+            name="zoology.mixers.based.Based",
+            kwargs={
+                "l_max": input_seq_len,
+                "feature_dim": ftr_dim,
+                "feature_name": "taylor_exp",
+                "num_key_value_heads": 1,
+                "num_heads": 1,
+                "train_view": "quadratic",
+            }
+        )
+        mixer = dict(
+            name="zoology.mixers.hybrid.Hybrid",
+            kwargs={"configs": [conv_mixer, lin_attn]}
+        )
+        name = f"based"
+        model = ModelConfig(
+            block_type="TransformerBlock",
+            d_model=d_model,
+            n_layers=2,
+            sequence_mixer=mixer,
+            max_position_embeddings=0,
+            name=name,
+            **model_factory_kwargs
+        )
+        models.append(model)
+
+
+# sliding window 
+for d_model in [128]:
+    for slide_width in [8, 16, 32, 64, 128, 256, 512, 1024]:
+        slide_attn = dict(
+            name="zoology.mixers.slide_attn.SlidingAttn",
+            kwargs={
+                "block_size": slide_width,
+                "attention_dropout": 0.0
+            }
+        )
+        mixer = dict(
+            name="zoology.mixers.hybrid.Hybrid",
+            kwargs={"configs": [conv_mixer, slide_attn]}
+        )
+        name = f"sliding-window-attention"
+        n_layers = 2
+        model = ModelConfig(
+            block_type="TransformerBlock",
+            d_model=d_model,
+            n_layers=2,
+            sequence_mixer=mixer,
+            max_position_embeddings=0,
+            name=name,
+            **model_factory_kwargs
+        )
+        models.append(model)
+
+
+# mamba 
+block_type = "MambaBlock"
+for d_model in [64, 128, 256]:
+    for d_state in [8, 16, 24]:
+        mixer = dict(
+            name="zoology.mixers.mamba.Mamba",
+            kwargs={"d_state": d_state}
+        )
+        model = ModelConfig(
+            block_type="MambaBlock",
+            d_model=d_model,
+            n_layers=2,
+            sequence_mixer=mixer,
+            max_position_embeddings=0,
+            name="mamba",
+            **model_factory_kwargs
+        )
+        models.append(model)
+
+
+# Hyena 
+block_type = "TransformerBlock"
+for d_model in [64, 128, 256]:
+    mixer = dict(
+        name="zoology.mixers.hyena.Hyena",
+        kwargs={"l_max": input_seq_len}
+    )
+    model = ModelConfig(
+        block_type="TransformerBlock",
+        d_model=d_model,
+        n_layers=2,
+        sequence_mixer=mixer,
+        max_position_embeddings=0,
+        name="hyena",
+        **model_factory_kwargs
+    )
+    models.append(model)
+
+
+# H3 
+block_type = "TransformerBlock"
+for d_model in [64, 128, 256]:
+    mixer = dict(
+        name="zoology.mixers.h3.H3",
+        kwargs={
+            "l_max": input_seq_len,
+            "d_state": input_seq_len,  # makes it mathematically equivalent to Hyena
+            "head_dim": 2
+        }
+    )
+    model = ModelConfig(
+        block_type="TransformerBlock",
+        d_model=d_model,
+        n_layers=2,
+        sequence_mixer=mixer,
+        max_position_embeddings=0,
+        name="h3",
         **model_factory_kwargs
     )
     models.append(model)
@@ -86,16 +207,17 @@ for d_model in [64, 128]:
 configs = []
 for model in models:
     for lr in np.logspace(-3, -1.5, 4):
-        run_id = f"{model.name}-lr={lr}"
+        run_id = f"{model.name}-lr{lr:.1e}"
         config = TrainConfig(
             model=model,
             data=data,
             learning_rate=lr,
-            max_epochs=64,
+            max_epochs=16,
             logger=LoggerConfig(
                 project_name="zoology",
                 entity="hazy-research"
             ),
+            slice_keys=["num_kv_pairs"],
             sweep_id=sweep_name,
             run_id=run_id,
             predictions_path=f"/var/cr05_data/sim_data/zg-synthetics/predictions/{run_id}",

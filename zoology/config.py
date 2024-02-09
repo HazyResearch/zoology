@@ -126,6 +126,7 @@ class TrainConfig(BaseConfig):
     # set metric to None to disable early stopping
     early_stopping_metric: str = "valid/accuracy"
     early_stopping_threshold: float = 0.99
+    slice_keys: List[str] = []
 
     learning_rate: float = 1e-3
     weight_decay: float = 0.1

@@ -30,6 +30,7 @@ class Trainer:
         weight_decay: float = 0.1,
         early_stopping_metric: str = None,
         early_stopping_threshold: float = None,
+        slice_keys: List[str] = [],
         device: Union[str, int] = "cuda",
         logger: WandbLogger = None,
     ):
@@ -44,6 +45,7 @@ class Trainer:
         self.early_stopping_threshold = early_stopping_threshold
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
+        self.slice_keys = slice_keys
 
     def train_epoch(self, epoch_idx: int):
         self.model.train()
@@ -84,7 +86,7 @@ class Trainer:
                 {
                     "train/loss": loss,
                     "train/main_loss": main_loss,
-                    "train/auxiliar_loss": auxiliary_loss,
+                    "train/auxiliary_loss": auxiliary_loss,
                     "epoch": epoch_idx,
                 }
             )
@@ -130,10 +132,11 @@ class Trainer:
             }
 
             # compute metrics for slices
-            # for key in ["num_kv_pairs"]:
+            # for key in self.slice_keys:
             #     acc_by_slice = results.groupby(key)["accuracy"].mean()
             #     for value, accuracy in acc_by_slice.items():
             #         metrics[f"valid/{key}/accuracy-{value}"] = accuracy
+
             iterator.set_postfix(metrics)
             self.logger.log({"epoch": epoch_idx, **metrics})
         return metrics
@@ -193,7 +196,8 @@ def train(config: TrainConfig):
 
     train_dataloader, test_dataloader = prepare_data(config.data)
     model = LanguageModel(config=config.model)
-    logger.log_model(model)
+    
+    logger.log_model(model, config=config)
 
     task = Trainer(
         model=model,
@@ -204,6 +208,7 @@ def train(config: TrainConfig):
         weight_decay=config.weight_decay,
         early_stopping_metric=config.early_stopping_metric,
         early_stopping_threshold=config.early_stopping_threshold,
+        slice_keys=config.slice_keys,
         device="cuda" if torch.cuda.is_available() else "cpu",
         logger=logger,
     )

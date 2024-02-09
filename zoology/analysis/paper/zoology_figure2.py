@@ -64,11 +64,12 @@ if __name__ == "__main__" :
             # "default-2023-11-13-00-31-15",
             # "default-2023-11-13-00-42-27"
 
-            "default-2024-02-08-20-16-21"
+            # "default-2024-02-08-20-16-21"
+            "default-2024-02-08-23-04-42"
         ], 
         project_name="zoology"
     )
 
     # df["data.input_seq_len"] = df["data.input_seq_len"].fillna(df["data.0.input_seq_len"])
     plot(df=df, max_seq_len=1024)
-    plt.savefig("results.pdf")
+    plt.savefig("results.png")
