@@ -4,7 +4,7 @@ from pathlib import Path
 import json
 import sys
 from dataclasses import dataclass, asdict
-from typing import Tuple, List, Union
+from typing import Dict, Tuple, List, Union
 import numpy as np
 
 import torch 
@@ -19,12 +19,10 @@ import random
 class DataSegment:
     inputs: torch.Tensor
     labels: torch.Tensor
-    slices: List[dict] = None
+    slices: Dict[str, any] = None
 
     def __len__(self):
         assert len(self.inputs) == len(self.labels) 
-        if self.slices is not None:
-            assert len(self.inputs) == len(self.slices)
         return len(self.inputs)
 
     @classmethod
@@ -143,38 +141,39 @@ class _SyntheticDataset(Dataset):
         segment_idx, batch_start = self.batches[batch_idx]
         segment = self.segments[segment_idx]
         slc = slice(batch_start, batch_start + self.batch_size)
-        slices = segment.slices[slc] if segment.slices is not None else [{}] * self.batch_size
+        
+        slices = [segment.slices if segment.slices is not None else {}] * self.batch_size
         return segment.inputs[slc], segment.labels[slc], slices      
 
     def __len__(self):
         return len(self.batches)
 
-def builder_from_single(single_fn: callable):
-    def _build_from_single(
-        num_train_examples: int,
-        num_test_examples: int,
-        vocab_size: int,
-        input_seq_len: int,
-        seed: int,
-        **kwargs
-    ):
-        result = {}
-        for split, num_examples in [("train", num_train_examples), ("test", num_test_examples)]:
-            # TODO: we probably wanna parallelize this
-            inputs, labels = [], []
-            rng = np.random.default_rng(seed + (0 if split == "train" else 1))
-            for _ in tqdm(range(num_examples)):
-                input, label = single_fn(
-                    vocab_size=vocab_size,
-                    input_seq_len=input_seq_len,
-                    rng=rng,
-                    **kwargs
-                )
-                inputs.append(input)
-                labels.append(label)
-            result[f"{split}_inputs"] = torch.stack(inputs)
-            result[f"{split}_labels"] = torch.stack(labels)
-        return SyntheticData(**result)
+# def builder_from_single(single_fn: callable):
+#     def _build_from_single(
+#         num_train_examples: int,
+#         num_test_examples: int,
+#         vocab_size: int,
+#         input_seq_len: int,
+#         seed: int,
+#         **kwargs
+#     ):
+#         result = {}
+#         for split, num_examples in [("train", num_train_examples), ("test", num_test_examples)]:
+#             # TODO: we probably wanna parallelize this
+#             inputs, labels = [], []
+#             rng = np.random.default_rng(seed + (0 if split == "train" else 1))
+#             for _ in tqdm(range(num_examples)):
+#                 input, label = single_fn(
+#                     vocab_size=vocab_size,
+#                     input_seq_len=input_seq_len,
+#                     rng=rng,
+#                     **kwargs
+#                 )
+#                 inputs.append(input)
+#                 labels.append(label)
+#             result[f"{split}_inputs"] = torch.stack(inputs)
+#             result[f"{split}_labels"] = torch.stack(labels)
+#         return SyntheticData(**result)
         
-    return _build_from_single
+#     return _build_from_single
 

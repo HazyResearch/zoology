@@ -45,6 +45,9 @@ def init_feature_map(feature_map: str='none', **kwargs: any):
     elif feature_map == "pos_elu":
         from zoology.mixers.feature_maps.base import PosELU
         return PosELU(**kwargs)
+    elif feature_map == "all_poly":
+        from zoology.mixers.feature_maps.all_poly import AllPolyMap
+        return AllPolyMap(**kwargs)
     else:
         raise NotImplementedError(f'rereSorry "{feature_map}" feature map not implemented.')
    

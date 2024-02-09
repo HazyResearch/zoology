@@ -57,11 +57,12 @@ if __name__ == "__main__" :
     df = fetch_wandb_runs(
         launch_id=[
             # "default-2024-02-09-04-11-25"
-            # "default-2024-02-09-05-44-06",
-            # "default-2024-02-09-14-59-58"
+            "default-2024-02-09-05-44-06",
+            "default-2024-02-09-14-59-58",
             
-            
-            "default-2024-02-09-17-29-23"
+            "default-2024-02-09-22-11-46",
+            "default-2024-02-09-22-35-00",
+            "default-2024-02-09-23-19-31"
         ], 
         project_name="zoology"
     )
