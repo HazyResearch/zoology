@@ -37,3 +37,4 @@ class Hybrid(nn.Module):
 
     def state_size(self, **kwargs):
         return self.mixer.state_size(**kwargs)
+    

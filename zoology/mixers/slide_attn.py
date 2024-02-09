@@ -60,4 +60,7 @@ class SlidingAttn(nn.Module):
         context = self.inner_attn(qkv)
         out = self.out_proj(context)
         return out
+
+    def state_size(self, sequence_length: int):
+        return self.inner_attn.block_size * self.d_model * 2
     
