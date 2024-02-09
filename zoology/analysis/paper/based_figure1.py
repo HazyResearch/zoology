@@ -15,13 +15,15 @@ def plot(
     df: pd.DataFrame,
     metric: str="valid/accuracy",
 ):
-    model_columns = [c for c in df.columns if c.startswith("model.")]
-    for c in model_columns:
-        df[c] = df[c].ffill()
+    # model_columns = [c for c in df.columns if c.startswith("model.")]
+    # for c in model_columns:
+    #     df[c] = df[c].ffill()
     idx = df.groupby(
-        [c for c in df.columns if c.startswith("model.")]
+        ["state_size", "model.name"]
     )[metric].idxmax(skipna=True).dropna()
     plot_df = df.loc[idx]
+    # plot_df = df
+
 
     sns.set_theme(style="whitegrid")
     g = sns.relplot(
@@ -29,9 +31,9 @@ def plot(
         y=metric,
         x="state_size",
         hue="model.name",
-        kind="line",
+        kind="scatter",
         marker="o",
-        height=2.25,
+        height=5,
         aspect=1,
     )
     g.set(xscale="log", ylabel="Accuracy", xlabel="State Size")
@@ -54,11 +56,15 @@ def plot(
 if __name__ == "__main__" :
     df = fetch_wandb_runs(
         launch_id=[
-            "default-2024-02-09-04-11-25"
+            # "default-2024-02-09-04-11-25"
+            "default-2024-02-09-05-44-06",
+            "default-2024-02-09-14-59-58"
         ], 
         project_name="zoology"
     )
 
     # # df["data.input_seq_len"] = df["data.input_seq_len"].fillna(df["data.0.input_seq_len"])
     plot(df=df)
+
     plt.savefig("results.png")
+    print("results.png")

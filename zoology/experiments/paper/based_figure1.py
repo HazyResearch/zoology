@@ -82,8 +82,19 @@ for d_model in [64, 128]:
 
 
 # based
-for d_model in [64, 128, 256]:
-    for ftr_dim in [16, 32, 64]:
+for d_model in [
+    48,
+    64, 
+    128, 
+    # 256
+]:
+    for ftr_dim in [
+        8, 
+        16, 
+        24,
+        # 32, 
+        # 64
+    ]:
         lin_attn = dict(
             name="zoology.mixers.based.Based",
             kwargs={
@@ -186,7 +197,7 @@ for d_model in [64, 128, 256]:
         name="zoology.mixers.h3.H3",
         kwargs={
             "l_max": input_seq_len,
-            "d_state": input_seq_len,  # makes it mathematically equivalent to Hyena
+            "d_state": d_model / 4,
             "head_dim": 2
         }
     )
@@ -201,6 +212,10 @@ for d_model in [64, 128, 256]:
     )
     models.append(model)
 
+
+# convenience for filtering out 
+included = ["h3", "based"]
+models = [m for m in models if any([i in m.name for i in included])]
 
 
 # 3. Finally we'll create a train config for each
