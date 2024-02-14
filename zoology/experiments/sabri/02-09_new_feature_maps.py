@@ -36,7 +36,7 @@ data = DataConfig(
     # can pass a tuple if you want a different batch size for train and test
     batch_size=(batch_size, batch_size / 8),
     cache_dir="/var/cr05_data/sabri_data/zoology",
-    force_cache=True
+    force_cache=False
 )
 
 # 2. Next, we are going to collect all the different model configs we want to sweep
@@ -134,43 +134,81 @@ for d_model in [
         # 16, 
         # 24,
         # 32, 
-        # 128,
-        # 192,
-        # 256
-        384,
+        64,
+        128,
+        256,
         512
-
     ]:
-        lin_attn = dict(
-            name="zoology.mixers.based.Based",
-            kwargs={
-                "l_max": input_seq_len,
-                "feature_dim": ftr_dim,
-                # "feature_name": "taylor_exp",
-                "feature_name": "all_poly",
-                "feature_kwargs": {
-                    "output_dim": ftr_dim,
-                },
-                "num_key_value_heads": 1,
-                "num_heads": 1,
-                "train_view": "quadratic",
-            }
-        )
-        mixer = dict(
-            name="zoology.mixers.hybrid.Hybrid",
-            kwargs={"configs": [conv_mixer, lin_attn]}
-        )
-        name = f"based-all-poly"
-        model = ModelConfig(
-            block_type="TransformerBlock",
-            d_model=d_model,
-            n_layers=2,
-            sequence_mixer=mixer,
-            max_position_embeddings=0,
-            name=name,
-            **model_factory_kwargs
-        )
-        models.append(model)
+        ftrs = []
+        
+        # all 
+        for l_ratio in [0.5, 1, 2, 4]:
+
+            for init in [
+                "randn", "kaiming", 
+                "plusminus"]:
+                ftrs.append({
+                    "feature_name": "all_poly",
+                    "feature_kwargs": {
+                        "output_dim": int(ftr_dim * l_ratio),
+                        "learnable": False,
+                        "init": init
+                    },
+                })
+            ftrs.append({
+                    "feature_name": "all_poly",
+                    "feature_kwargs": {
+                        "output_dim": int(ftr_dim * l_ratio),
+                        "learnable": True,
+                        "init": "kaiming"
+                    },
+            })
+        
+        
+        ftrs.append({
+            "feature_name": "zoology.mixers.feature_maps.all_poly.SquaredMap",
+            "feature_kwargs": {}
+        })
+
+        ftrs.append({
+            "feature_name": "zoology.mixers.feature_maps.base.PosELU",
+            "feature_kwargs": {}
+        })
+
+        ftrs.append({
+            "feature_name": "zoology.mixers.feature_maps.base.Identity",
+            "feature_kwargs": {}
+        })
+
+
+        for ftr in ftrs:
+            lin_attn = dict(
+                name="zoology.mixers.based.Based",
+                kwargs={
+                    "l_max": input_seq_len,
+                    "feature_dim": ftr_dim,
+                    # "feature_name": "taylor_exp",
+                    **ftr,
+                    "num_key_value_heads": 1,
+                    "num_heads": 1,
+                    "train_view": "quadratic",
+                }
+            )
+            mixer = dict(
+                name="zoology.mixers.hybrid.Hybrid",
+                kwargs={"configs": [conv_mixer, lin_attn]}
+            )
+            name = f"based-all-poly"
+            model = ModelConfig(
+                block_type="TransformerBlock",
+                d_model=d_model,
+                n_layers=2,
+                sequence_mixer=mixer,
+                max_position_embeddings=0,
+                name=name,
+                **model_factory_kwargs
+            )
+            models.append(model)
 
 
 

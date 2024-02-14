@@ -10,6 +10,8 @@ from einops import rearrange
 from typing import Optional, Tuple
 from pydantic import validate_call
 
+from zoology.utils import import_from_str
+
 try:
     from transformers.models.llama.modeling_llama import apply_rotary_pos_emb, repeat_kv, LlamaRotaryEmbedding
 except:
@@ -49,8 +51,8 @@ def init_feature_map(feature_map: str='none', **kwargs: any):
         from zoology.mixers.feature_maps.all_poly import AllPolyMap
         return AllPolyMap(**kwargs)
     else:
-        raise NotImplementedError(f'rereSorry "{feature_map}" feature map not implemented.')
-   
+        feature_map = import_from_str(feature_map)
+        return feature_map(**kwargs)   
 
 class Based(nn.Module):
     
