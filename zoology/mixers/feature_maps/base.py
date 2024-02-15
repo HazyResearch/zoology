@@ -46,3 +46,6 @@ class ReLU(FeatureMap):
     def forward(self, x: torch.Tensor):
         return F.relu(x * self.temp).clamp(min=self.eps)
 
+class Square(FeatureMap):
+    def forward(self, x: torch.Tensor):
+        return x ** 2
