@@ -36,11 +36,11 @@ setup(
     name="zoology",
     version="0.0.1",
     description="",
-    author="sabri",
-    packages=["states"],
+    author="simran sabri",
+    packages=["zoology"],
     install_requires=_REQUIRED,
     extras_require=_OPTIONAL,
     entry_points={
-        'console_scripts': ['sts=states.cli:cli'],
+        'console_scripts': ['zg=zoology.cli:cli'],
     },
 )
