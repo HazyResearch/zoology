@@ -1,7 +1,8 @@
 import argparse
 import random
 from datetime import datetime
-from typing import Union
+from typing import List, Union
+import pandas as pd
 
 import torch
 import torch.nn as nn
@@ -29,6 +30,7 @@ class Trainer:
         weight_decay: float = 0.1,
         early_stopping_metric: str = None,
         early_stopping_threshold: float = None,
+        slice_keys: List[str] = [],
         device: Union[str, int] = "cuda",
         logger: WandbLogger = None,
     ):
@@ -43,6 +45,7 @@ class Trainer:
         self.early_stopping_threshold = early_stopping_threshold
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
+        self.slice_keys = slice_keys
 
     def train_epoch(self, epoch_idx: int):
         self.model.train()
@@ -52,7 +55,7 @@ class Trainer:
             desc=f"Train Epoch {epoch_idx}/{self.max_epochs}",
         )
 
-        for inputs, targets in iterator:
+        for inputs, targets, slices in iterator:
             inputs, targets = inputs.to(self.device), targets.to(self.device)
             self.optimizer.zero_grad()
 
@@ -83,7 +86,7 @@ class Trainer:
                 {
                     "train/loss": loss,
                     "train/main_loss": main_loss,
-                    "train/auxiliar_loss": auxiliary_loss,
+                    "train/auxiliary_loss": auxiliary_loss,
                     "epoch": epoch_idx,
                 }
             )
@@ -92,15 +95,16 @@ class Trainer:
         self.model.eval()
 
         test_loss = 0
-        all_preds = []
-        all_targets = []
+        # all_preds = []
+        # all_targets = []
+        results = [] 
 
         with torch.no_grad(), tqdm(
             total=len(self.test_dataloader),
             desc=f"Valid Epoch {epoch_idx}/{self.max_epochs}",
             postfix={"loss": "-", "acc": "-"},
         ) as iterator:
-            for inputs, targets in self.test_dataloader:
+            for inputs, targets, slices in self.test_dataloader:
                 inputs, targets = inputs.to(self.device), targets.to(self.device)
                 logits = self.model(inputs)
 
@@ -110,19 +114,29 @@ class Trainer:
                 test_loss += loss / len(self.test_dataloader)
 
                 # SE: important to
-                all_preds.append(torch.argmax(logits, dim=-1).cpu())
-                all_targets.append(targets.cpu())
+                preds = torch.argmax(logits, dim=-1).cpu()
+                results.extend(compute_metrics(preds, targets.cpu(), slices))
+               
                 iterator.update(1)
 
-            test_accuracy = compute_accuracy(
-                torch.cat(all_preds, dim=0), torch.cat(all_targets, dim=0)
-            )
+            # test_accuracy = compute_accuracy(
+            #     torch.cat(all_preds, dim=0), torch.cat(all_targets, dim=0)
+            # )
+            results = pd.DataFrame(results)
+            test_accuracy = results["accuracy"].mean()
 
             # logging and printing
             metrics = {
                 "valid/loss": test_loss.item(),
                 "valid/accuracy": test_accuracy.item(),
             }
+
+            # compute metrics for slices
+            for key in self.slice_keys:
+                acc_by_slice = results.groupby(key)["accuracy"].mean()
+                for value, accuracy in acc_by_slice.items():
+                    metrics[f"valid/{key}/accuracy-{value}"] = accuracy
+
             iterator.set_postfix(metrics)
             self.logger.log({"epoch": epoch_idx, **metrics})
         return metrics
@@ -155,10 +169,21 @@ class Trainer:
             self.scheduler.step()
 
 
-def compute_accuracy(
-    preds: torch.Tensor, targets: torch.Tensor, ignore_index: int = -100
+def compute_metrics(
+    preds: torch.Tensor, 
+    targets: torch.Tensor, 
+    slices: List[dict],
+    ignore_index: int = -100,
 ):
-    return (preds == targets)[targets != ignore_index].to(float).mean()
+    results = []
+    for pred, target, slc in zip(preds, targets, slices):
+        results.append(
+            {
+                "accuracy": (pred == target)[target != ignore_index].to(float).mean().item(),
+                **slc
+            }
+        )
+    return results
 
 
 def train(config: TrainConfig):
@@ -171,7 +196,8 @@ def train(config: TrainConfig):
 
     train_dataloader, test_dataloader = prepare_data(config.data)
     model = LanguageModel(config=config.model)
-    logger.log_model(model)
+    
+    logger.log_model(model, config=config)
 
     task = Trainer(
         model=model,
@@ -182,6 +208,7 @@ def train(config: TrainConfig):
         weight_decay=config.weight_decay,
         early_stopping_metric=config.early_stopping_metric,
         early_stopping_threshold=config.early_stopping_threshold,
+        slice_keys=config.slice_keys,
         device="cuda" if torch.cuda.is_available() else "cpu",
         logger=logger,
     )

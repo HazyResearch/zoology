@@ -1,6 +1,7 @@
 import uuid
 import numpy as np
-from zoology.config import TrainConfig, ModelConfig, DataConfig, LoggerConfig
+from zoology.config import TrainConfig, ModelConfig, DataConfig, DataSegmentConfig, LoggerConfig
+from zoology.data.associative_recall import MQARConfig
 
 
 sweep_id = uuid.uuid4().hex[:6]
@@ -12,10 +13,10 @@ VOCAB_SIZE = 8_192
 
 configs = []
 for input_seq_len, num_kv_pairs in [
-    (64, 4),
     (128, 8),
+    (64, 4),
     (256, 16),
-    (512, 64),
+    # (512, 64),
 ]:
     if input_seq_len == 1024:
         batch_size = 64
@@ -26,22 +27,20 @@ for input_seq_len, num_kv_pairs in [
     else:
         batch_size = 512
 
+
+    factory_kwargs = {
+        "num_kv_pairs": num_kv_pairs,
+        "train_power_a": 0.01,
+        "test_power_a": 0.01,
+        "random_non_queries": False
+    }
+
     data = DataConfig(
-        num_train_examples=100_000,
-        num_test_examples=3_000,
-        vocab_size=VOCAB_SIZE,
-        input_seq_len=input_seq_len,
+        train_configs=[MQARConfig(num_examples=100_000, vocab_size=VOCAB_SIZE, input_seq_len=input_seq_len, **factory_kwargs)],
+        test_configs=[MQARConfig(num_examples=3_000, vocab_size=VOCAB_SIZE, input_seq_len=input_seq_len, **factory_kwargs)],
         batch_size=batch_size,
-        # cache_dir="", # TODO: add a directory to cache your results!
-        builder={
-            "name": "zoology.data.associative_recall.multiquery_ar",
-            "kwargs": {
-                "num_kv_pairs": num_kv_pairs,
-                "train_power_a": 0.01,
-                "test_power_a": 0.01,
-                "random_non_queries": False
-            }
-        }   
+        cache_dir="/var/cr05_data/sabri_data/zoology",
+        # cache_dir="", # TODO: add a directory to cache your data!
     )
 
     for d_model in [
@@ -108,7 +107,8 @@ for input_seq_len, num_kv_pairs in [
                                     "feature_dim": 8,
                                     "num_key_value_heads": 1,
                                     "num_heads": 1,
-                                    "feature_name": "taylor_exp"
+                                    "feature_name": "taylor_exp",
+                                    "train_view": "quadratic"
                                 }
                             )
                         ]

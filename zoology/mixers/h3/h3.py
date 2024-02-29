@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from einops import rearrange
+from pydantic import validate_call
 
 from .ss_kernel import SSKernel
 
@@ -14,15 +15,16 @@ def mul_sum(q, y):
 
 class H3(nn.Module):
 
+    @validate_call
     def __init__(
             self,
-            d_model,
-            d_state=64,
-            l_max=None,
-            head_dim=1,
-            use_fast_fftconv=False,
-            dropout=0.0,   # Just to absorb the kwarg
-            layer_idx=None,
+            d_model: int,
+            d_state: int=64,
+            l_max: int=None,
+            head_dim: int=1,
+            use_fast_fftconv: bool=False,
+            dropout: float=0.0,   # Just to absorb the kwarg
+            layer_idx: int=None,
             device=None, dtype=None,
             kernel_args: dict={},
             **kwargs
@@ -201,3 +203,6 @@ class H3(nn.Module):
         if not torch.is_autocast_enabled():
             y = y.to(dtype=self.output_linear.weight.dtype)
         return self.output_linear(y), next_state_k, next_state
+
+    def state_size(self, sequence_length: int=2048):
+        return self.d_model * self.N

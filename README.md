@@ -17,7 +17,8 @@ Zoology provides machine learning researchers with a simple playground for under
 
 *Is Zoology a good fit for your use case?* If you are looking to actually train a large machine learning model, Zoology's training harness (which is optimized for simplicity) is certainly not a good fit. For our language model research, we've found the [GPT-NeoX](https://github.com/EleutherAI/gpt-neox) useful for this. That being said, you might still want to use some of Zoology's layer implementations or maybe even mix the synthetic tasks into your training distribution. 
 
-*I want to explore the Based architecture. How should I get started?* Follow along the Getting Started and Configuration settings. Once you know how to launch a sweep, we can turn our attention to [this experiment file](https://github.com/HazyResearch/zoology/blob/main/zoology/experiments/mqar_d_model.py). You can [toggle the sequence mixers here](https://github.com/HazyResearch/zoology/blob/dd43c72fe455fedf283cd73e037addc0e0d3be03/zoology/experiments/mqar_d_model.py#L156) to launch synthetic experiments with Based. Recall that Based is an architecture with a gated convolution layer and a linear attention layer. You can [see here](https://github.com/HazyResearch/zoology/blob/dd43c72fe455fedf283cd73e037addc0e0d3be03/zoology/experiments/mqar_d_model.py#L100) how we will be initializing a 2-layer model, one layer of each type, for training in these experiments. More to come for Based soon!
+*I want to explore the Based architecture. How should I get started?* See our repository at [HazyResearch/based](https://github.com/HazyResearch/based) for the code we used to train and evaluate large Based language models. If you would like to reproduce the synthetic experiments from the Based paper, this is the right repository! See [zoology/experiments/arxiv24_based_figure2/README.md]() for instructions on how to reproduce the results. 
+
 
 ## Getting started
 
@@ -42,21 +43,14 @@ If you have access to multiple GPUs, you can run the sweep in parallel by adding
 
 
 ## Reproducing paper experiments
- In this section, we'll show how to reproduce the results in our paper *[Zoology: Measuring and Improving Recall in Efficient Language Models](https://arxiv.org/abs/2312.04927)* and [blogpost](https://hazyresearch.stanford.edu/blog/2023-12-11-zoology1-analysis).
- 
- The main synthetic data results in our work are summarized in Figure 2. The x-axis is the model dimension and the y-axis is accuracy on Mqar. Increasing the sequence
-length correlates with increased task difficulty. The results shown are the maximum performance for each model over four learning rates.
-<div align="center" >
-    <img src="assets/figure2.png" height=150 alt="Figure 2" style="margin-bottom:px"/> 
-</div>
+This repository has been used to produce results in a few papers on efficient language models. 
+The configs, instructions and plotting code for reproducing the figures in these papers are provided in the following sub-folders. 
 
-To reproduce these results, ensure you have WandB setup to log all the results and then run the command:
-```
-python -m zoology.launch zoology/experiments/paper/figure2.py -p
-```
-Note that there are 448 model/data configurations in this sweep, so it takes a while to run. We ran most of our experiments on an 8xA100 with the `-p` flag, which launches configurations in parallel. To run a smaller scale experiment, you can modify the loops in `figure2.py` file to only include a subset of the configurations you're interested in (*e.g.* you can drop some models, sequence lengths, or learning rates). For more details on how the experiments are configured, see the [configuration section](#configuration-experiments-and-sweeps).
-
-To produce the plot after the run, see the plotting code `zoology/analysis/paper/figure2.py`.
+- [Zoology: Measuring and improving recall in efficient language models](https://arxiv.org/abs/2312.04927)
+    - zoology/experiments/iclr24_zoology_figure2
+- [Based: Simple linear attention balances the recall-throughput tradeoff]()
+    - zoology/experiments/arxiv24_based_figure2
+    - zoology/experiments/arxiv24_based_figure3
 
 ## Configuration, Experiments, and Sweeps
 In this section, we'll walk through how to configure an experiment and launch sweeps. 
@@ -68,12 +62,8 @@ from zoology.config import TrainConfig, ModelConfig, DataConfig, ModuleConfig, F
 config = TrainConfig(
     max_epochs=20,
     data=DataConfig(
-        vocab_size=128,
-        builder=FunctionConfig(
-            name="zoology.data.associative_recall.gap_power_distr_ar",
-            kwargs={"num_kv_pairs": 4}
-        ),
-        
+        train_configs=[MQARConfig(num_examples=10_000, vocab_size=128, input_seq_len=input_seq_len, **factory_kwargs)],
+        test_configs=[MQARConfig(num_examples=1_000, vocab_size=128, input_seq_len=input_seq_len, **factory_kwargs)],
     ),
     model=ModelConfig(
         vocab_size=128,
@@ -132,59 +122,49 @@ TrainConfig(
 ## Data
 In this section, we'll walk through how to create a new synthetic task and discuss some of the tasks that are already implemented.
 
-*Creating a new task.* To create a new task, you'll need to implement a data builder function with the following signature:
+*Creating a new task.* To create a new task, you'll need to subclass `zoology.config.DataSegmentConfig`. 
+See zoology/data/associative_recall.py  for an example. 
 ```python
-from zoology.utils.data import SyntheticData
-def my_data_builder(
-    num_train_examples: int,
-    num_test_examples: int,
-    vocab_size: int,
-    input_seq_len: int,
-    seed: int,
-    **kwargs
-) -> SyntheticData:
-    ...
-```
-You can add any additional arguments to the function signature, but the ones above are required.
+class DataSegmentConfig(BaseConfig):
+    """
+    This class should be subclassed to define per task. For example, MQARConfig
+    """
+    vocab_size: int = 8_192
+    num_examples: int = 1_000
+    input_seq_len: int = 64
 
-The function must return a `SyntheticData` object, which is a simple dataclass with the following fields:
+    def build(self, **kwargs):
+        raise NotImplementedError()
+```
+
+You'll need to implement the `build` method, which should return a `zoology.data.utils.DataSegment` object, a simple dataclass:
+
 ```python
 @dataclass
-class SyntheticData:
-    """Simple dataclass which specifies the format that should be returned by
-    the synthetic data generators.
-
-    Args:
-        train_inputs (torch.Tensor): Training inputs of shape (num_train_examples, input_seq_len)
-        train_labels (torch.Tensor): Training labels of shape (num_train_examples, input_seq_len)
-        test_inputs (torch.Tensor): Test inputs of shape (num_test_examples, input_seq_len)
-        test_labels (torch.Tensor): Test labels of shape (num_test_examples, input_seq_len)
-    """
-
-    train_inputs: torch.Tensor
-    train_labels: torch.Tensor
-    test_inputs: torch.Tensor
-    test_labels: torch.Tensor
+class DataSegment:
+    inputs: torch.Tensor
+    labels: torch.Tensor
+    slices: Dict[str, any] = None
 ```
 The inputs and labels should be integer tensors with values in the range `[0, vocab_size)`. 
 
-You can create this function in any file you want, as long as it's importable. Let's
-assume that we've created a file `zoology/data/my_task.py` and written our `my_data_builder` function there.
+
+You can create this subclass in any file you want, as long as it's importable. Let's
+assume that we've created a file `zoology/data/my_task.py` and written our `MyDataSegmentConfig` function there.
 Then, we can add it to our data configuration with: 
 ```python
 from zoology.config import TrainConfig, DataConfig, FunctionConfig
 config = TrainConfig(
     DataConfig(
-        vocab_size=128,
-        builder=FunctionConfig(name="zoology.data.my_task.my_data_builder"),
-            kwargs={"my_data_builder_kwarg": 4}
-        ),
+        train_configs=[MyDataSegmentConfig(num_examples=10_000, vocab_size=128, input_seq_len=input_seq_len, **other_kwargs)],
+        test_configs=[MyDataSegmentConfig(num_examples=1_000, vocab_size=128, input_seq_len=input_seq_len, **other_kwargs)],
     ),
 )
 ```
-When you launch an experiment with this configuration, the `my_data_builder` function will be imported and called with the specified arguments, constructing the dataset. 
+
 
 **Caching dataset creation.** Sometimes it's useful to cache the dataset creation process, especially if it's expensive. To do so you can pass a `cache_dir` to the `DataConfig`: `DataConfig(..., cache_dir="my_cache_dir")`.
+
 
 
 ## About 

@@ -4,6 +4,7 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from pydantic import validate_call
 
 from einops import rearrange
 
@@ -214,19 +215,20 @@ class Filter(OptimModule):
 
 class Hyena(nn.Module):
     NUM_PROJECTIONS = 3 
-
+    
+    @validate_call
     def __init__(
         self,
-        d_model,
-        l_max,
-        filter_order=64,
-        num_heads=1,
-        num_blocks=1,
-        outer_mixing=False,
-        dropout=0.0,
-        filter_dropout=0.0,
-        short_filter_order=3,
-        return_state=False,
+        d_model: int,
+        l_max: int,
+        filter_order: int=64,
+        num_heads: int=1,
+        num_blocks: int=1,
+        outer_mixing: bool=False,
+        dropout: float=0.0,
+        filter_dropout: float=0.0,
+        short_filter_order: int=3,
+        return_state: bool=False,
         bidirectional: bool=False,
         layer_idx: int=None,
         **filter_args,
@@ -355,3 +357,5 @@ class Hyena(nn.Module):
             return y, None
         return y
 
+    def state_size(self, sequence_length: int=2048) -> int:
+        return self.d_model * sequence_length

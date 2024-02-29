@@ -12,13 +12,12 @@ from zoology.config import TrainConfig
 MAX_WORKERS_PER_GPU = 1
 
 
-def execute_config(
-    config: TrainConfig, 
-    redirect_out: str, 
-    debug: bool
-):
-    # Save the original standard output
-    train(config=config)
+def execute_config(config: TrainConfig):
+    try: 
+        train(config=config)
+    except Exception as e:
+        return config, e
+    return config, None
 
 
 @click.command()
@@ -59,19 +58,25 @@ def main(python_file, outdir, name: str, parallelize: bool, gpus: str):
     # Run each script in parallel using Ray
     if not use_ray:
         for config in configs: 
-            execute_config(config, outdir, not parallelize)
+            train(config)
     else:
         completed = 0
+        failed = 0
         total = len(configs)
         print(f"Completed: {completed} ({completed / total:0.1%}) | Total: {total}")
 
         remote = ray.remote(num_gpus=(1 // MAX_WORKERS_PER_GPU))(execute_config)
-        futures = [remote.remote(config, outdir, not parallelize) for config in configs]
+        futures = [remote.remote(config) for config in configs]
         
         while futures:
             complete, futures = ray.wait(futures)
-            completed += len(complete)
-            print(f"Completed: {completed} ({completed / total:0.1%}) | Total: {total}")
+            for config, error in ray.get(complete):
+                if error is not None:
+                    failed += 1
+                    config.print()
+                    print(error)
+                completed += 1
+            print(f"Completed: {completed} ({completed / total:0.1%} -- {failed} failed) | Total: {total}")
 
         ray.shutdown()
 

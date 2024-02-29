@@ -1,11 +1,13 @@
 import argparse
 from datetime import datetime
 from functools import partial
+from typing import List, Tuple, Union
 
 from pydantic import BaseModel
 
 
 from zoology.utils import import_from_str
+
 
 class BaseConfig(BaseModel):
     @classmethod
@@ -62,19 +64,27 @@ class ModuleConfig(BaseConfig):
     def instantiate(self, **kwargs):
         return import_from_str(self.name)(**kwargs, **self.kwargs)
 
-
-class DataConfig(BaseConfig):
-    builder: FunctionConfig = None
-    seed: int = 0
-
-    num_train_examples: int = 10_000
-    num_test_examples: int = 1000
-    input_seq_len: int = 64
+class DataSegmentConfig(BaseConfig):
+    """
+    This class should be subclassed to define per task. For example, MQARConfig
+    """
     vocab_size: int = 8_192
-    batch_size: int = 32
+    num_examples: int = 1_000
+    input_seq_len: int = 64
+
+    def build(self, **kwargs):
+        raise NotImplementedError()
     
+class DataConfig(BaseConfig):
+    train_configs: List[DataSegmentConfig]
+    test_configs: List[DataSegmentConfig]
+
+    # can pass a tuple if you want a different batch size for train and test
+    batch_size: Union[int, Tuple[int, int]] = 32
+
+    seed: int = 123
+
     cache_dir: str = None
-    caching: bool = True
     force_cache: bool = False 
 
 class ModelConfig(BaseConfig):
@@ -97,6 +107,7 @@ class ModelConfig(BaseConfig):
     pad_vocab_size_multiple: int = 1
 
     block_type: str = "TransformerBlock"
+    name: str = "default"
 
 class LoggerConfig(BaseConfig):
 
@@ -105,8 +116,8 @@ class LoggerConfig(BaseConfig):
     
 
 class TrainConfig(BaseConfig):
-    data: DataConfig = DataConfig()
-    model: ModelConfig = ModelConfig()
+    data: DataConfig
+    model: ModelConfig
     logger: LoggerConfig = LoggerConfig()
 
     max_epochs: int = 100
@@ -115,6 +126,7 @@ class TrainConfig(BaseConfig):
     # set metric to None to disable early stopping
     early_stopping_metric: str = "valid/accuracy"
     early_stopping_threshold: float = 0.99
+    slice_keys: List[str] = []
 
     learning_rate: float = 1e-3
     weight_decay: float = 0.1
@@ -123,5 +135,3 @@ class TrainConfig(BaseConfig):
     launch_id: str = None
     sweep_id: str = None
     run_id: str = "default"
-
-
