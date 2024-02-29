@@ -47,10 +47,10 @@ This repository has been used to produce results in a few papers on efficient la
 The configs, instructions and plotting code for reproducing the figures in these papers are provided in the following sub-folders. 
 
 - [Zoology: Measuring and improving recall in efficient language models](https://arxiv.org/abs/2312.04927)
-    - [zoology/experiments/iclr24_zoology_figure2]()
+    - zoology/experiments/iclr24_zoology_figure2
 - [Based: Simple linear attention balances the recall-throughput tradeoff]()
-    - [zoology/experiments/arxiv24_based_figure2]()
-    - [zoology/experiments/arxiv24_based_figure3]()
+    - zoology/experiments/arxiv24_based_figure2
+    - zoology/experiments/arxiv24_based_figure3
 
 ## Configuration, Experiments, and Sweeps
 In this section, we'll walk through how to configure an experiment and launch sweeps. 
@@ -62,12 +62,8 @@ from zoology.config import TrainConfig, ModelConfig, DataConfig, ModuleConfig, F
 config = TrainConfig(
     max_epochs=20,
     data=DataConfig(
-        vocab_size=128,
-        builder=FunctionConfig(
-            name="zoology.data.associative_recall.gap_power_distr_ar",
-            kwargs={"num_kv_pairs": 4}
-        ),
-        
+        train_configs=[MQARConfig(num_examples=10_000, vocab_size=128, input_seq_len=input_seq_len, **factory_kwargs)],
+        test_configs=[MQARConfig(num_examples=1_000, vocab_size=128, input_seq_len=input_seq_len, **factory_kwargs)],
     ),
     model=ModelConfig(
         vocab_size=128,
@@ -126,59 +122,49 @@ TrainConfig(
 ## Data
 In this section, we'll walk through how to create a new synthetic task and discuss some of the tasks that are already implemented.
 
-*Creating a new task.* To create a new task, you'll need to implement a data builder function with the following signature:
+*Creating a new task.* To create a new task, you'll need to subclass `zoology.config.DataSegmentConfig`. 
+See zoology/data/associative_recall.py  for an example. 
 ```python
-from zoology.utils.data import SyntheticData
-def my_data_builder(
-    num_train_examples: int,
-    num_test_examples: int,
-    vocab_size: int,
-    input_seq_len: int,
-    seed: int,
-    **kwargs
-) -> SyntheticData:
-    ...
-```
-You can add any additional arguments to the function signature, but the ones above are required.
+class DataSegmentConfig(BaseConfig):
+    """
+    This class should be subclassed to define per task. For example, MQARConfig
+    """
+    vocab_size: int = 8_192
+    num_examples: int = 1_000
+    input_seq_len: int = 64
 
-The function must return a `SyntheticData` object, which is a simple dataclass with the following fields:
+    def build(self, **kwargs):
+        raise NotImplementedError()
+```
+
+You'll need to implement the `build` method, which should return a `zoology.data.utils.DataSegment` object, a simple dataclass:
+
 ```python
 @dataclass
-class SyntheticData:
-    """Simple dataclass which specifies the format that should be returned by
-    the synthetic data generators.
-
-    Args:
-        train_inputs (torch.Tensor): Training inputs of shape (num_train_examples, input_seq_len)
-        train_labels (torch.Tensor): Training labels of shape (num_train_examples, input_seq_len)
-        test_inputs (torch.Tensor): Test inputs of shape (num_test_examples, input_seq_len)
-        test_labels (torch.Tensor): Test labels of shape (num_test_examples, input_seq_len)
-    """
-
-    train_inputs: torch.Tensor
-    train_labels: torch.Tensor
-    test_inputs: torch.Tensor
-    test_labels: torch.Tensor
+class DataSegment:
+    inputs: torch.Tensor
+    labels: torch.Tensor
+    slices: Dict[str, any] = None
 ```
 The inputs and labels should be integer tensors with values in the range `[0, vocab_size)`. 
 
-You can create this function in any file you want, as long as it's importable. Let's
-assume that we've created a file `zoology/data/my_task.py` and written our `my_data_builder` function there.
+
+You can create this subclass in any file you want, as long as it's importable. Let's
+assume that we've created a file `zoology/data/my_task.py` and written our `MyDataSegmentConfig` function there.
 Then, we can add it to our data configuration with: 
 ```python
 from zoology.config import TrainConfig, DataConfig, FunctionConfig
 config = TrainConfig(
     DataConfig(
-        vocab_size=128,
-        builder=FunctionConfig(name="zoology.data.my_task.my_data_builder"),
-            kwargs={"my_data_builder_kwarg": 4}
-        ),
+        train_configs=[MyDataSegmentConfig(num_examples=10_000, vocab_size=128, input_seq_len=input_seq_len, **other_kwargs)],
+        test_configs=[MyDataSegmentConfig(num_examples=1_000, vocab_size=128, input_seq_len=input_seq_len, **other_kwargs)],
     ),
 )
 ```
-When you launch an experiment with this configuration, the `my_data_builder` function will be imported and called with the specified arguments, constructing the dataset. 
+
 
 **Caching dataset creation.** Sometimes it's useful to cache the dataset creation process, especially if it's expensive. To do so you can pass a `cache_dir` to the `DataConfig`: `DataConfig(..., cache_dir="my_cache_dir")`.
+
 
 
 ## About 
