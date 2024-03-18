@@ -20,82 +20,8 @@ def multiquery_ar(
     num_examples: int,
     input_seq_len: int,
     seed: int,
-<<<<<<< HEAD
     power_a: float=0.01,
     num_kv_pairs: int=8,
-=======
-):
-    # SE: Using only numpy operations and no Python loops makes this alot faster. 
-    # apologies about the readbillity.
-    assert input_seq_len % 2 == 0, "input_seq_len must be even"
-    assert vocab_size > input_seq_len
-    assert num_kv_pairs * 2 + num_queries <= input_seq_len
-
-    np.random.seed(seed)
-    
-    context_size = num_kv_pairs * 2
-
-    # create keys so that each key is present exactly once in each example
-    key_vocab_size = vocab_size // 2
-    key_choices = np.arange(1, key_vocab_size)
-    value_choices = np.arange(key_vocab_size, vocab_size)
-
-    keys_unshuffled = np.tile(key_choices, (num_examples, 1))
-    keys = np.apply_along_axis(np.random.choice, 1, keys_unshuffled, replace=False, size=num_kv_pairs)
-
-    values_unshuffled = np.tile(value_choices, (num_examples, 1))
-    values = np.apply_along_axis(np.random.choice, 1, values_unshuffled, replace=False, size=num_kv_pairs)
-
-    # create sequences
-    kvs = np.zeros((num_examples, context_size), dtype=np.int64)
-    kvs[:, 0::2] = keys
-    kvs[:, 1::2] = values
-
-    # create empty inputs and targets
-    # targets are filled with -100, which is ignored by the loss function and metrics
-    inputs = np.zeros((num_examples, input_seq_len), dtype=np.int64)
-    targets = np.full((num_examples, input_seq_len), dtype=np.int64, fill_value=-100)
-
-    # fill the first context_size tokens with the key-value pairs
-    inputs[:, 0:context_size] = kvs
-
-    # create a matrix of indices, which is needed to index correctly below 
-    rows = np.tile(np.arange(num_examples), (num_queries, 1)).T  
-
-    # sample random kv pairs to use for the queries
-    kv_idx_choices = np.arange(0, num_kv_pairs)
-    kv_idxs = np.tile(kv_idx_choices, (num_examples, 1))
-    kv_idxs = np.apply_along_axis(np.random.choice, 1, kv_idxs, replace=False, size=num_queries)
-    queries = keys[rows, kv_idxs]
-    labels = values[rows, kv_idxs]
-
-    # sample random positions in the last input_seq_len - context_size tokens where
-    # the queries will be inserted
-    query_pos_choices = np.arange(context_size, input_seq_len)
-    query_pos_choices = np.tile(query_pos_choices, (num_examples, 1))
-    query_pos = np.apply_along_axis(np.random.choice, 1, query_pos_choices, replace=False, size=num_queries)
-
-    inputs[rows, query_pos] = queries
-    targets[rows, query_pos] = labels
-
-    inputs, targets = torch.tensor(inputs[:, :-1]), torch.tensor(targets[:, :-1])
-    
-    # replace all the 0 with random values
-    if random_non_queries:
-        inputs[inputs == 0] = torch.randint(vocab_size, size=inputs.shape)[inputs == 0]
-    
-    return inputs, targets
-
-
-def multiquery_ar(
-    vocab_size: int=8_192,
-    num_train_examples: int=100_000,
-    num_test_examples: int=3_000,
-    input_seq_len: int=64,
-    num_kv_pairs: int=4,
-    train_power_a: float=0.01,
-    test_power_a: float=0.01,
->>>>>>> de4e258784224e09909c257ff3ea040f089ed660
     random_non_queries: bool=True,
     include_slices: bool=True,
     **kwargs
