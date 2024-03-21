@@ -162,6 +162,6 @@ if __name__ == "__main__" :
 
         plot(df=df, max_seq_len=1024, data_key=x_key, model_key=model_key, x_lab=x_lab)
         print(f"Length of DF = {len(df)}")
-        output_file = f"/var/cr01_data/sabri/code/zoology/zoology/analysis/results_{experiment}.pdf"
+        output_file = f"results_{experiment}.png"
         print(f"{output_file}")
         plt.savefig(output_file)

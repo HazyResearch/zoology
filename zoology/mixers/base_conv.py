@@ -5,11 +5,14 @@ from typing import List, Union
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from pydantic import validate_call
 from einops import rearrange
 
 from .convolution import ImplicitLongConvolution, ShortConvolution, LongConvolution
 
 class BaseConv(nn.Module):
+
+    @validate_call
     def __init__(
         self,
         d_model: int,
@@ -58,3 +61,6 @@ class BaseConv(nn.Module):
         else:
             y = u_conv * u_proj
         return y + u
+
+    def state_size(self, sequence_length: int):
+        return self.conv.state_size(sequence_length=sequence_length)

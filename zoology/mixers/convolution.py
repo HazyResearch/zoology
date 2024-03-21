@@ -40,6 +40,8 @@ class ShortConvolution(nn.Module):
         kernel_size: int
     ): 
         super().__init__()
+        self.d_model = d_model
+        self.kernel_size = kernel_size
         self.conv = nn.Conv1d(
             in_channels=d_model,
             out_channels=d_model,
@@ -58,6 +60,9 @@ class ShortConvolution(nn.Module):
         l = x.size(1)
         y = self.conv(x.transpose(1, 2))[..., :l].transpose(1, 2)
         return y 
+
+    def state_size(self, **kwargs):
+        return self.d_model * self.kernel_size
 
 
 class LongConvolution(nn.Module):
@@ -99,6 +104,9 @@ class LongConvolution(nn.Module):
         y = fft_conv(x, self.filter, dropout_mask=None, gelu=False)
         y = y.transpose(1, 2)
         return y.to(dtype=x.dtype)
+
+    def state_size(self, sequence_length: int):
+        return self.d_model * sequence_length
 
 
 class PositionalEmbedding(nn.Module):
@@ -190,3 +198,7 @@ class ImplicitLongConvolution(nn.Module):
 
         y = y.transpose(1, 2)
         return y.to(dtype=x.dtype)
+    
+
+    def state_size(self, sequence_length: int):
+        return self.d_model * sequence_length

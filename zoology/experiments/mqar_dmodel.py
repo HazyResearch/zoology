@@ -45,12 +45,12 @@ for input_seq_len, num_kv_pairs in [
     )
 
     for d_model in [
-        64, 
+        # 64, 
         128, 
         256, 
         512
     ]:
-        for lr in  np.logspace(-4, -2, 4):
+        for lr in  np.logspace(-4, -2, 4)[2:]:
             
             MIXERS = {
                 "attention": dict(
@@ -68,12 +68,6 @@ for input_seq_len, num_kv_pairs in [
                 ),
                 "rwkv": dict(
                     name="zoology.mixers.rwkv.RWKVTimeMixer",
-                    kwargs={
-                        "l_max": input_seq_len,
-                    },
-                ),
-                "rwkv5": dict(
-                    name="zoology.mixers.rwkv5.RWKVTimeMixer",
                     kwargs={
                         "l_max": input_seq_len,
                     },

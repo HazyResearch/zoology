@@ -49,6 +49,51 @@ def flatten(data: dict, parent_key:str=None, sep: str='.'):
     return items
 
 
+def unflatten(d: dict) -> dict:
+    """ 
+    Takes a flat dictionary with '/' separated keys, and returns it as a nested dictionary.
+    
+    Parameters:
+    d (dict): The flat dictionary to be unflattened.
+    
+    Returns:
+    dict: The unflattened, nested dictionary.
+    """
+    import numpy as np
+    result = {}
+
+    for key, value in d.items():
+        parts = key.split('.')
+        d = result
+        for part in parts[:-1]:
+            if part not in d:
+                d[part] = {}
+            d = d[part]
+        
+        if (isinstance(value, (np.float64, np.float32, float)) and np.isnan(value)):
+            # need to check if value is nan, because wandb will create a column for every
+            # possible value of a categorical variable, even if it's not present in the data
+            continue
+        
+        d[parts[-1]] = value
+
+
+    # check if any dicts have contiguous numeric keys, which should be converted to list
+    def convert_to_list(d):
+        if isinstance(d, dict):
+            try:
+                keys = [int(k) for k in d.keys()]
+                keys.sort()
+                if keys == list(range(min(keys), max(keys)+1)):
+                    return [d[str(k)] for k in keys]
+            except ValueError:
+                pass
+            return {k: convert_to_list(v) for k, v in d.items()}
+        return d
+
+    return convert_to_list(result)
+
+
 def fetch_wandb_runs(project_name: str, filters: dict=None, **kwargs) -> pd.DataFrame:
     """
     Fetches run data from a W&B project into a pandas DataFrame.
