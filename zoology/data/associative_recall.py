@@ -2,8 +2,8 @@
 import numpy as np
 import torch
 
-from ..config import DataSegmentConfig
-from .utils import DataSegment
+from zoology.config import DataSegmentConfig
+from zoology.data.utils import DataSegment
 
 class MQARConfig(DataSegmentConfig):
     name: str="multiquery_ar"
