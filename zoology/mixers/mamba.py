@@ -8,14 +8,14 @@ from einops import rearrange, repeat
 from pydantic import validate_call
 
 from zoology.mixers.mamba_ssm.triton.layernorm import RMSNorm, layer_norm_fn, rms_norm_fn
-try:
-    from causal_conv1d import causal_conv1d_fn
-except:
-    assert 0, print(f"Need to install causal_conv1d: pip install causal_conv1d")
-try:
-    from zoology.mixers.mamba_ssm.selective_scan_interface import selective_scan_fn, mamba_inner_fn
-except:
-    assert 0, print(f"Need to install selective_scan_interface: pip install mamba_ssm")
+# try:
+#     from causal_conv1d import causal_conv1d_fn
+# except:
+#     assert 0, print(f"Need to install causal_conv1d: pip install causal_conv1d")
+# try:
+#     from zoology.mixers.mamba_ssm.selective_scan_interface import selective_scan_fn, mamba_inner_fn
+# except:
+#     assert 0, print(f"Need to install selective_scan_interface: pip install mamba_ssm")
 
 
 class Mamba(nn.Module):
