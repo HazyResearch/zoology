@@ -1,26 +1,20 @@
 import numpy as np
-from zoology.config import TrainConfig
-from zoology.config import TrainConfig, ModelConfig, DataConfig, FunctionConfig, ModuleConfig
-
-from zoology.config import TrainConfig, ModelConfig, DataConfig, FunctionConfig, ModuleConfig
+from zoology.config import TrainConfig, ModelConfig, DataConfig, ModuleConfig
+from zoology.data.associative_recall import MQARConfig
 
 
 configs = []
+factory_kwargs = {
+        "num_kv_pairs": 4,
+    }
 
 for lr in np.logspace(-4, -2, 10):
 
    config = TrainConfig(
       data=DataConfig(
          # cache_dir="/path/to/cache/dir"  TODO: add a directory where data will be cached
-         vocab_size=256,
-         input_seq_len=64,
-         num_train_examples=10_000,
-         num_test_examples=1_000,
-         builder=FunctionConfig(
-               name="zoology.data.associative_recall.multiquery_ar",
-               kwargs={"num_kv_pairs": 4}
-         ),
-         
+         train_configs=[MQARConfig(num_examples=10_000, vocab_size=256, input_seq_len=64, **factory_kwargs)],
+         test_configs=[MQARConfig(num_examples=1_000, vocab_size=256, input_seq_len=64, **factory_kwargs)],
       ),
       model=ModelConfig(
          vocab_size=256,
