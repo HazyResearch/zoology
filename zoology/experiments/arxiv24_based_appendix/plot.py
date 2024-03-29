@@ -87,5 +87,5 @@ if __name__ == "__main__" :
     # # df["data.input_seq_len"] = df["data.input_seq_len"].fillna(df["data.0.input_seq_len"])
     plot(df=df)
 
-    plt.savefig("results.png")
-    print("results.png")
+    plt.savefig("results.pdf")
+    print("results.pdf")

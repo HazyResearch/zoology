@@ -60,12 +60,29 @@ if __name__ == "__main__" :
             "default-2024-02-09-05-44-06",
             "default-2024-02-09-14-59-58",
             
-            "default-2024-02-09-22-11-46",
-            "default-2024-02-09-22-35-00",
-            "default-2024-02-09-23-19-31"
+            # all poly
+            # "default-2024-02-09-22-11-46",
+            # "default-2024-02-09-22-35-00",
+            # "default-2024-02-09-23-19-31",
+            
+            # scatter brain
+            "default-2024-03-27-05-21-50",
+
+            # big bird
+            # "default-2024-03-27-16-03-34",
+            "default-2024-03-27-20-28-57",
+
+            # nystromformer
+            # "default-2024-03-27-16-47-54",
+            "default-2024-03-27-18-10-57"
+
+
+
         ], 
         project_name="zoology"
     )
+
+    df = df[df["model.name"].isin(["scatter-brain", "sliding-window-attention", "based", "big-bird", "nystromformer"])]
 
     # # df["data.input_seq_len"] = df["data.input_seq_len"].fillna(df["data.0.input_seq_len"])
     plot(df=df)

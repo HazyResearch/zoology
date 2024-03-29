@@ -265,6 +265,41 @@ def cumulative_parity(
     return DataSegment(
         inputs, 
         labels, 
+        slices={"input_seq_len": input_seq_len}
         # slices={"num_kv_pairs": num_kv_pairs, "input_seq_len": input_seq_len}
+    )
+
+
+
+
+
+class CumulativeMajorityConfig(DataSegmentConfig):
+
+    num_examples: int=1_000
+    input_seq_len: int=16
+
+    name: str="cumulative_majority"
+
+
+    def build(self, seed: int) -> DataSegment:
+        return cumulative_majority(self, seed=seed)
+
+def cumulative_majority(
+    config: CumulativeMajorityConfig,
+    seed: int, 
+    **kwargs
+) -> DataSegment:
+    """
+    Generate majority sequences.
+    """
+    np.random.seed(seed)
+
+    inputs = np.random.randint(0, 2, size=(config.num_examples, config.input_seq_len))
+    labels = ((inputs * 2 - 1).cumsum(axis=1) >= 0).astype(int)
+
+    return DataSegment(
+        torch.tensor(inputs), 
+        torch.tensor(labels), 
+        slices={"input_seq_len": config.input_seq_len}
     )
 

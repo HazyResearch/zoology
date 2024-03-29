@@ -213,8 +213,120 @@ for d_model in [64, 128, 256]:
     models.append(model)
 
 
+# scatter brain
+block_type = "TransformerBlock"
+for d_model in [64, 128, 256]:
+    for window_size in [4, 16, 64, 256, 1024]:
+        for feature_dim in [32, 64, 128]:
+            if d_model < feature_dim:
+                continue
+            attention_mixer = dict(
+                name="zoology.mixers.scatterbrain.SBLocalAttention",
+                kwargs={
+                    "num_heads": 1,
+                    "window_size": window_size,
+                    "feature_dim": feature_dim,
+                }
+            )
+            mixer = ModuleConfig(
+                name="zoology.mixers.hybrid.Hybrid",
+                kwargs={"configs": [conv_mixer, attention_mixer]}
+            )
+            model = ModelConfig(
+                block_type="TransformerBlock",
+                d_model=d_model,
+                n_layers=2,
+                sequence_mixer=mixer,
+                max_position_embeddings=0,
+                name="scatter-brain",
+                **model_factory_kwargs
+            )
+            models.append(model)
+
+
+# bigbird
+block_type = "TransformerBlock"
+for d_model in [64]:
+    for block_size in [4, 8, 16, 32, 64, 128]:
+        attention_mixer = dict(
+            name="zoology.mixers.bigbird.BigBIRDAttention",
+            kwargs={
+                "block_size": block_size,
+            }
+        )
+        mixer = ModuleConfig(
+            name="zoology.mixers.hybrid.Hybrid",
+            kwargs={"configs": [conv_mixer, attention_mixer]}
+        )
+        model = ModelConfig(
+            block_type="TransformerBlock",
+            d_model=d_model,
+            n_layers=2,
+            sequence_mixer=mixer,
+            max_position_embeddings=0,
+            name="big-bird",
+            **model_factory_kwargs
+        )
+        models.append(model)     
+
+
+# nystrom former
+block_type = "TransformerBlock"
+for d_model in [128]:
+    for num_landmarks in [16, 32, 64, 128, 256, 512]:
+        attention_mixer = dict(
+            name="zoology.mixers.nystromformer.NystromAttention",
+            kwargs={
+                "num_landmarks": num_landmarks,
+            }
+        )
+        mixer = ModuleConfig(
+            name="zoology.mixers.hybrid.Hybrid",
+            kwargs={"configs": [conv_mixer, attention_mixer]}
+        )
+        model = ModelConfig(
+            block_type="TransformerBlock",
+            d_model=d_model,
+            n_layers=2,
+            sequence_mixer=mixer,
+            max_position_embeddings=0,
+            name="nystromformer",
+            **model_factory_kwargs
+        )
+        models.append(model)     
+
+
+
+# mra
+block_type = "TransformerBlock"
+for d_model in [128]:
+    for num_blocks in [8, 16, 32, 64]:
+        attention_mixer = dict(
+            name="zoology.mixers.mra.MRAAttention",
+            kwargs={
+                "num_block_per_row": num_blocks,
+                "max_position_embeddings": 64,  # minimum sequence length
+            }
+        )
+        mixer = ModuleConfig(
+            name="zoology.mixers.hybrid.Hybrid",
+            kwargs={"configs": [conv_mixer, attention_mixer]}
+        )
+        model = ModelConfig(
+            block_type="TransformerBlock",
+            d_model=d_model,
+            n_layers=2,
+            sequence_mixer=mixer,
+            max_position_embeddings=0,
+            name="mra",
+            **model_factory_kwargs
+        )
+        models.append(model)     
+
+
+
 # convenience for filtering out 
-included = ["h3", "based"]
+included = ["mra"]
 models = [m for m in models if any([i in m.name for i in included])]
 
 
