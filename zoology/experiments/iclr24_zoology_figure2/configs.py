@@ -137,7 +137,7 @@ for input_seq_len, num_kv_pairs in [
 
                 model = ModelConfig(
                     d_model=d_model,
-                    n_layers=4 if sequence_mixer != "attention" else 2,
+                    n_layers=2,
                     block_type=block_type,
                     max_position_embeddings=input_seq_len if sequence_mixer == "attention" else 0,
                     vocab_size=VOCAB_SIZE,
