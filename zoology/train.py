@@ -142,7 +142,7 @@ class Trainer:
         return metrics
 
     def fit(self):
-        self.model.to("cuda")
+        self.model.to(self.device)
         self.loss_fn = nn.CrossEntropyLoss()
         self.optimizer = optim.AdamW(
             self.model.parameters(),
