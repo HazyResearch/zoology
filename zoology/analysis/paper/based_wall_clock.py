@@ -24,7 +24,7 @@ from flashfftconv import FlashFFTConv
 ########################### PROFILE ###########################
 
 
-def profile_mamba2(batch, seq_len, num_heads, head_dim, dstate, chunk_size=64, ngroups=1):
+def profile_mamba2(batch, seq_len, num_heads, head_dim, dstate, use_tk, chunk_size=64, ngroups=1):
     dtype = torch.bfloat16
     device = torch.device("cuda")
 
@@ -91,7 +91,7 @@ def profile_mamba1(batch, seq_len, num_heads, head_dim, dstate, chunk_size=64, n
     return elapsed
 
 
-def profile_attn(batch, seq_len, num_heads, head_dim, block_size):
+def profile_attn(batch, seq_len, num_heads, head_dim, block_size, use_tk):
 
     shape = (batch, seq_len, num_heads, head_dim)
     q = torch.randn(shape, dtype=torch.bfloat16, device="cuda")
@@ -113,7 +113,7 @@ def profile_attn(batch, seq_len, num_heads, head_dim, block_size):
     return elapsed
 
 
-def profile_based(batch, seq_len, num_heads, head_dim, feature_dim, is_tk=False):
+def profile_based(batch, seq_len, num_heads, head_dim, feature_dim, use_tk):
     qk_shape = (batch, num_heads, seq_len, int(feature_dim))
     shape = (batch, num_heads, seq_len, int(head_dim))
 
@@ -123,7 +123,7 @@ def profile_based(batch, seq_len, num_heads, head_dim, feature_dim, is_tk=False)
     
     # Warmup
     for _ in range(10):
-        if is_tk:
+        if use_tk:
             y, kv_state = tk.based( q, k, v )
         else:
             y = fused_chunk_based( q, k, v, True, True)
@@ -131,7 +131,7 @@ def profile_based(batch, seq_len, num_heads, head_dim, feature_dim, is_tk=False)
     torch.cuda.synchronize()
     t0 = time.time()
     for _ in range(10):
-        if is_tk:
+        if use_tk:
             y, kv_state = tk.based( q, k, v )
         else:
             y = fused_chunk_based( q, k, v, True, True)
@@ -174,7 +174,7 @@ def fftconv_tk(
     out = tk.fftconv(u_real, kfT_real, kfT_imag, f_real, f_imag, finv_real, finv_imag, tw_real, tw_imag, twinv_real, twinv_imag, B, H, N, N1)
 
 
-def profile_h3(batch, seq_len, d_model):
+def profile_h3(batch, seq_len, d_model, use_tk):
     u = torch.randn(batch, d_model, seq_len, dtype=torch.float16, device="cuda")
     k = torch.randn(d_model, seq_len, dtype=torch.float16, device="cuda")
     D = torch.randn(d_model, dtype=torch.float16, device="cuda")
@@ -184,53 +184,53 @@ def profile_h3(batch, seq_len, d_model):
     B, H, N = u.shape
     N1 = int(math.sqrt(N))
 
-    # ( 
-    #     u_real, u_imag, kfT_real, kfT_imag, 
-    #     f_real, f_imag, finv_real, finv_imag, 
-    #     tw_real, tw_imag, twinv_real, twinv_imag, 
-    #     o_real 
-    # ) = get_inputs(
-    #     u, k, B, H, N, N1, 
-    # )
-
-    # conv_flashfft = FlashFFTConv(int(N), dtype=torch.float16).to(u.device)
+    if use_tk:
+        ( 
+            u_real, u_imag, kfT_real, kfT_imag, 
+            f_real, f_imag, finv_real, finv_imag, 
+            tw_real, tw_imag, twinv_real, twinv_imag, 
+            o_real 
+        ) = get_inputs(
+            u, k, B, H, N, N1, 
+        )
 
     # Warmup
     for _ in range(10):
-        y = fftconv_ref(u, k, D, None)
-        # y = fftconv_tk(
-        #     u, k, 
-        #     u_real, u_imag, kfT_real, kfT_imag, 
-        #     f_real, f_imag, finv_real, finv_imag, 
-        #     tw_real, tw_imag, twinv_real, twinv_imag, 
-        #     o_real, 
-        #     B, H, N, N1
-        # )
-        # y = conv_flashfft(u, k)
+        if use_tk:
+            y = fftconv_tk(
+                u, k, 
+                u_real, u_imag, kfT_real, kfT_imag, 
+                f_real, f_imag, finv_real, finv_imag, 
+                tw_real, tw_imag, twinv_real, twinv_imag, 
+                o_real, 
+                B, H, N, N1
+            )
+        else:
+            y = fftconv_ref(u, k, D, None)
 
     torch.cuda.synchronize()
     t0 = time.time()
     for _ in range(10):
-        y = fftconv_ref(u, k, D, None)
-        # y = fftconv_tk(
-        #     u, k, 
-        #     u_real, u_imag, kfT_real, kfT_imag, 
-        #     f_real, f_imag, finv_real, finv_imag, 
-        #     tw_real, tw_imag, twinv_real, twinv_imag, 
-        #     o_real, 
-        #     B, H, N, N1
-        # )
-        # y = conv_flashfft(u, k)
+        if use_tk:
+            y = fftconv_tk(
+                u, k, 
+                u_real, u_imag, kfT_real, kfT_imag, 
+                f_real, f_imag, finv_real, finv_imag, 
+                tw_real, tw_imag, twinv_real, twinv_imag, 
+                o_real, 
+                B, H, N, N1
+            )
+        else:
+            y = fftconv_ref(u, k, D, None)
     torch.cuda.synchronize()
     t1 = time.time()
     elapsed = ( t1 - t0 ) / 10
     return elapsed
 
 
-def profile_hyena():
-    return 0
 
 ########################### PLOT ###########################
+
 
 def plot(
     df: pd.DataFrame,
@@ -241,9 +241,11 @@ def plot(
     )[metric].idxmax(skipna=True).dropna()
     plot_df = df.loc[idx]
 
+    # delete hyena 
+    plot_df = plot_df[plot_df["model.name"] != "hyena"]
+
     model_name_2_func = {
         "h3": profile_h3,
-        # "hyena": profile_hyena,
         "based": profile_based,
         "mamba": profile_mamba1,
         "mamba2": profile_mamba2,
@@ -251,13 +253,13 @@ def plot(
         "attention": profile_attn,
     }
 
-    use_tk = False
+    use_tk = True
 
     for i, row in plot_df.iterrows():
         model_name = row["model.name"]
         if model_name in model_name_2_func:
             batch_size = 256
-            seq_len = 8192
+            seq_len = 4096
             num_heads = 1
             d_model = row['model.d_model']
             head_dim = d_model // num_heads
@@ -275,20 +277,18 @@ def plot(
                 elapsed = model_name_2_func[model_name](*args)
             elif model_name == "mamba2":
                 dstate = row['model.sequence_mixer.kwargs.d_state']
-                args = (batch_size, seq_len, num_heads, head_dim, dstate)
+                args = (batch_size, seq_len, num_heads, head_dim, dstate, use_tk)
                 elapsed = model_name_2_func[model_name](*args)
             elif model_name == "sliding-window-attention":
                 block_size = row['model.sequence_mixer.kwargs.configs.1.kwargs.block_size']
-                args = (batch_size, seq_len, num_heads, head_dim, block_size)
+                args = (batch_size, seq_len, num_heads, head_dim, block_size, use_tk)
                 elapsed = model_name_2_func[model_name](*args)
             elif model_name == "attention":
-                args = (batch_size, seq_len, num_heads, head_dim, -1)
+                args = (batch_size, seq_len, num_heads, head_dim, -1, use_tk)
                 elapsed = model_name_2_func[model_name](*args)
             elif model_name == "h3":
-                args = (batch_size, seq_len, d_model)
+                args = (batch_size, seq_len, d_model, use_tk)
                 elapsed = model_name_2_func[model_name]( *args )
-            elif model_name == "hyena":
-                elapsed = model_name_2_func[model_name]()
             else:
                 import pdb; pdb.set_trace()
             plot_df.loc[i, "wall_clock"] = elapsed
@@ -311,7 +311,6 @@ def plot(
         "Sliding Window Attention": "#35A0CD",
         "Attention": "#4B689D",
         "H3": "#B44A4E",
-        "Hyena": "#4F9F62",
     }
 
     # set legend
@@ -322,12 +321,9 @@ def plot(
         "sliding-window-attention": "Sliding Window Attention",
         "attention": "Attention",
         "h3": "H3",
-        "hyena": "Hyena",
     }
 
-    # rename model names
     plot_df["model.name"] = plot_df["model.name"].map(model2legend)
-    # rename column name from model.name to Model
     plot_df = plot_df.rename(columns={"model.name": "Model"})
 
     sns.set_theme(style="whitegrid")
