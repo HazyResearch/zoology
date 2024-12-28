@@ -138,14 +138,16 @@ class LMBackbone(nn.Module):
             config.d_model, 
             config.vocab_size, 
             config.max_position_embeddings,
-            learnable=config.learnable_word_embeddings,
-            device="cuda" if torch.cuda.is_available() else "cpu"
+            learnable=config.learnable_word_embeddings
         )
         if config.block_type == 'TransformerBlock':
             block_cls = TransformerBlock
         elif config.block_type == 'MambaBlock':
             from zoology.mixers.mamba import MambaBlock
             block_cls = MambaBlock
+        elif config.block_type == "Mamba2Block": 
+            from zoology.mixers.mamba2 import Mamba2Block
+            block_cls = Mamba2Block
         self.layers = nn.ModuleList(
             [
                 block_cls(config=config, layer_idx=i)
@@ -195,10 +197,13 @@ class LanguageModel(nn.Module):
     
     def state_size(self, sequence_length: int):
         from zoology.mixers.mamba import MambaBlock
+        from zoology.mixers.mamba2 import Mamba2Block
 
         state_size = 0
         for layer in self.backbone.layers:
             if isinstance(layer, MambaBlock):
+                mixer = layer.mixer
+            if isinstance(layer, Mamba2Block):
                 mixer = layer.mixer
             elif isinstance(layer, TransformerBlock):
                 mixer = layer.sequence_mixer
