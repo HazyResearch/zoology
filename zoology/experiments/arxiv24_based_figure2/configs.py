@@ -35,7 +35,7 @@ data = DataConfig(
     test_configs=test_configs,
     # can pass a tuple if you want a different batch size for train and test
     batch_size=(batch_size, batch_size / 8),
-    cache_dir="/var/cr05_data/sabri_data/zoology"
+    cache_dir="/data/sim/zoology"
 )
 
 # 2. Next, we are going to collect all the different model configs we want to sweep
@@ -151,7 +151,7 @@ for d_model in [128]:
         models.append(model)
 
 
-# mamba 
+# Mamba 
 block_type = "MambaBlock"
 for d_model in [64, 128, 256]:
     for d_state in [8, 16, 24]:
@@ -166,6 +166,26 @@ for d_model in [64, 128, 256]:
             sequence_mixer=mixer,
             max_position_embeddings=0,
             name="mamba",
+            **model_factory_kwargs
+        )
+        models.append(model)
+
+# Mamba2
+# mamba 2
+block_type = "Mamba2Block"
+for d_model in [64, 128, 256]:
+    for d_state in [8, 16, 24]:
+        mixer = dict(
+            name="zoology.mixers.mamba2.Mamba2",
+            kwargs={"d_state": d_state}
+        )
+        model = ModelConfig(
+            block_type="Mamba2Block",
+            d_model=d_model,
+            n_layers=2,
+            sequence_mixer=mixer,
+            max_position_embeddings=0,
+            name="mamba2",
             **model_factory_kwargs
         )
         models.append(model)
@@ -326,7 +346,7 @@ for d_model in [128]:
 
 
 # convenience for filtering out 
-included = ["mra"]
+included = ["based"]
 models = [m for m in models if any([i in m.name for i in included])]
 
 
@@ -347,7 +367,9 @@ for model in models:
             slice_keys=["num_kv_pairs"],
             sweep_id=sweep_name,
             run_id=run_id,
-            predictions_path=f"/var/cr05_data/sim_data/zg-synthetics/predictions/{run_id}",
+            predictions_path=f"/data/sim/zoology/predictions/{run_id}",
             collect_predictions=True,
         )
         configs.append(config)
+
+

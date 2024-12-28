@@ -9,9 +9,10 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from zoology.analysis.utils import fetch_wandb_runs
 
-
-import torch
 import time
+import torch
+import torch.nn.functional as F
+from einops import rearrange
 import thunderkittens as tk
 from mamba_ssm.ops.triton.ssd_combined import mamba_chunk_scan_combined
 from mamba_ssm.ops.selective_scan_interface import selective_scan_fn
@@ -20,14 +21,14 @@ from fla.ops.based import fused_chunk_based
 from flashfftconv import FlashFFTConv
 
 
-from torch import nn
-import torch.nn.functional as F
-from einops import rearrange
+########################### PROFILE ###########################
 
 
 def profile_mamba2(batch, seq_len, num_heads, head_dim, dstate, chunk_size=64, ngroups=1):
     dtype = torch.bfloat16
     device = torch.device("cuda")
+
+    batch, seq_len, num_heads, head_dim, dstate = int(batch), int(seq_len), int(num_heads), int(head_dim), int(dstate)
 
     # Initialize tensors
     x = torch.randn(batch, seq_len, num_heads, head_dim, dtype=dtype, device=device)
@@ -229,7 +230,7 @@ def profile_h3(batch, seq_len, d_model):
 def profile_hyena():
     return 0
 
-
+########################### PLOT ###########################
 
 def plot(
     df: pd.DataFrame,
@@ -245,10 +246,12 @@ def plot(
         # "hyena": profile_hyena,
         "based": profile_based,
         "mamba": profile_mamba1,
-        # "mamba2": profile_mamba2,
+        "mamba2": profile_mamba2,
         "sliding-window-attention": profile_attn,
         "attention": profile_attn,
     }
+
+    use_tk = False
 
     for i, row in plot_df.iterrows():
         model_name = row["model.name"]
@@ -261,10 +264,10 @@ def plot(
 
             if model_name == "based":
                 feature_dim = row['model.sequence_mixer.kwargs.configs.1.kwargs.feature_dim']
-                if feature_dim != 16 or head_dim != 64: 
+                if feature_dim != 16 or (head_dim != 64 and use_tk): 
                     elapsed = 0
                 else: 
-                    args = (batch_size, seq_len, num_heads, head_dim, feature_dim)
+                    args = (batch_size, seq_len, num_heads, head_dim, feature_dim, use_tk)
                     elapsed = model_name_2_func[model_name](*args)
             elif model_name == "mamba":
                 dstate = row['model.sequence_mixer.kwargs.d_state']
@@ -302,21 +305,37 @@ def plot(
 
     # set colors 
     model2color = {
-        "based": "#DD8452",
-        "mamba": "#F8EC41",
-        "mamba2": "green",
-        "sliding-window-attention": "#35A0CD",
-        "attention": "#4B689D",
-        "h3": "#B44A4E",
-        "hyena": "#4F9F62",
+        "Based": "#DD8452",
+        "Mamba": "#F8EC41",
+        "Mamba2": "green",
+        "Sliding Window Attention": "#35A0CD",
+        "Attention": "#4B689D",
+        "H3": "#B44A4E",
+        "Hyena": "#4F9F62",
     }
+
+    # set legend
+    model2legend = {
+        "based": "Based",
+        "mamba": "Mamba",
+        "mamba2": "Mamba2",
+        "sliding-window-attention": "Sliding Window Attention",
+        "attention": "Attention",
+        "h3": "H3",
+        "hyena": "Hyena",
+    }
+
+    # rename model names
+    plot_df["model.name"] = plot_df["model.name"].map(model2legend)
+    # rename column name from model.name to Model
+    plot_df = plot_df.rename(columns={"model.name": "Model"})
 
     sns.set_theme(style="whitegrid")
     g = sns.relplot(
         data=plot_df,
         y=metric,
         x="wall_clock",
-        hue="model.name",
+        hue="Model",
         kind="scatter",
         edgecolor="black",
         marker="o",
@@ -331,7 +350,8 @@ if __name__ == "__main__" :
     df = fetch_wandb_runs(
         launch_id=[
             "default-2024-02-09-05-44-06",
-            "default-2024-02-09-14-59-58"
+            "default-2024-02-09-14-59-58",
+            "default-2024-12-28-14-12-35",
         ], 
         project_name="zoology"
     )
