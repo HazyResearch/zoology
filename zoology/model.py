@@ -73,28 +73,57 @@ class TokenEmbeddings(nn.Module):
 def _init_weights(
     module,
     n_layers,
+    block_type,
     initializer_range=0.02,
     rescale_prenorm_residual=True,
+    n_residuals_per_layer=1,  # Change to 2 if we have MLP
 ):
-    if isinstance(module, nn.Linear):
-        nn.init.normal_(module.weight, std=initializer_range)
-        if module.bias is not None:
-            nn.init.zeros_(module.bias)
-    elif isinstance(module, nn.Embedding):
-        nn.init.normal_(module.weight, std=initializer_range)
+    if 'Mamba' in block_type:
+        if isinstance(module, nn.Linear):
+            if module.bias is not None:
+                if not getattr(module.bias, "_no_reinit", False):
+                    nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight, std=initializer_range)
+    else:
+        if isinstance(module, nn.Linear):
+            nn.init.normal_(module.weight, std=initializer_range)
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight, std=initializer_range)
 
     if rescale_prenorm_residual:
-        for name, p in module.named_parameters():
-            if "out_proj.weight" in name or "fc2.weight" in name:
-                # Special Scaled Initialization --> There are 2 Layer Norms per Transformer Block
-                nn.init.normal_(
-                    p, mean=0.0, std=initializer_range / math.sqrt(2 * n_layers)
-                )
-            # If using GLU activation for now, we scale the std by 2
-            elif "output_linear.0.weight" in name:
-                nn.init.normal_(
-                    p, mean=0.0, std=initializer_range / math.sqrt(2 * n_layers)
-                )
+        if 'Mamba' in block_type:
+            print("hi mamba!")
+            if rescale_prenorm_residual:
+                # Reinitialize selected weights subject to the OpenAI GPT-2 Paper Scheme:
+                #   > A modified initialization which accounts for the accumulation on the residual path with model depth. Scale
+                #   > the weights of residual layers at initialization by a factor of 1/√N where N is the # of residual layers.
+                #   >   -- GPT-2 :: https://openai.com/blog/better-language-models/
+                #
+                # Reference (Megatron-LM): https://github.com/NVIDIA/Megatron-LM/blob/main/megatron/model/gpt_model.py
+                for name, p in module.named_parameters():
+                    if name in ["out_proj.weight", "fc2.weight"]:
+                        # Special Scaled Initialization --> There are 2 Layer Norms per Transformer Block
+                        # Following Pytorch init, except scale by 1/sqrt(2 * n_layer)
+                        # We need to reinit p since this code could be called multiple times
+                        # Having just p *= scale would repeatedly scale it down
+                        nn.init.kaiming_uniform_(p, a=math.sqrt(5))
+                        with torch.no_grad():
+                            p /= math.sqrt(n_residuals_per_layer * n_layers)
+        else:
+            for name, p in module.named_parameters():
+                if "out_proj.weight" in name or "fc2.weight" in name:
+                    # Special Scaled Initialization --> There are 2 Layer Norms per Transformer Block
+                    nn.init.normal_(
+                        p, mean=0.0, std=initializer_range / math.sqrt(2 * n_layers)
+                    )
+                # If using GLU activation for now, we scale the std by 2
+                elif "output_linear.0.weight" in name:
+                    nn.init.normal_(
+                        p, mean=0.0, std=initializer_range / math.sqrt(2 * n_layers)
+                    )
 
 
 class TransformerBlock(nn.Module):
@@ -156,7 +185,7 @@ class LMBackbone(nn.Module):
         )
         self.drop_f = nn.Dropout(config.resid_dropout)
         self.ln_f = nn.LayerNorm(config.d_model, eps=config.layer_norm_epsilon)
-        self.apply(partial(_init_weights, n_layers=config.n_layers,))
+        self.apply(partial(_init_weights, n_layers=config.n_layers, block_type=config.block_type))
 
     def forward(self, input_ids, position_ids=None):
         hidden_states = self.embeddings(
@@ -184,7 +213,7 @@ class LanguageModel(nn.Module):
         self.lm_head = nn.Linear(config.d_model, config.vocab_size, bias=False)
 
         # Initialize weights and apply final processing
-        self.apply(partial(_init_weights,n_layers=config.n_layers,))
+        self.apply(partial(_init_weights, n_layers=config.n_layers, block_type=config.block_type))
 
         # tie weights
         self.lm_head.weight = self.backbone.embeddings.word_embeddings.weight
