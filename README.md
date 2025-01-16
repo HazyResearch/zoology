@@ -58,17 +58,19 @@ In this section, we'll walk through how to configure an experiment and launch sw
 *Configuration*. Models, data, and training are controlled by configuration objects. For details on available configuration fields, see the configuration definition in [`zoology/config.py`](zoology/config.py). The configuration is a nested Pydantic model, which can be instantiated as follows:
 ```python
 from zoology.config import TrainConfig, ModelConfig, DataConfig, ModuleConfig, FunctionConfig
+from zoology.data.associative_recall import MQARConfig
+
+input_seq_len = 10
 
 config = TrainConfig(
     max_epochs=20,
     data=DataConfig(
-        train_configs=[MQARConfig(num_examples=10_000, vocab_size=128, input_seq_len=input_seq_len, **factory_kwargs)],
-        test_configs=[MQARConfig(num_examples=1_000, vocab_size=128, input_seq_len=input_seq_len, **factory_kwargs)],
+        train_configs=[MQARConfig(num_examples=10_000, vocab_size=128, input_seq_len=input_seq_len, )], #**factory_kwargs
+        test_configs=[MQARConfig(num_examples=1_000, vocab_size=128, input_seq_len=input_seq_len, )], #**factory_kwargs
     ),
     model=ModelConfig(
         vocab_size=128,
-        sequence_mixer=ModuleConfig("name": "zoology.mixers.attention.MHA"}
-    ),
+        sequence_mixer=ModuleConfig(name= "zoology.mixers.attention.MHA") ),
 )
 ```
 Note that the `FunctionConfig` and `ModuleConfig` are special objects that configure partial functions and PyTorch modules, respectively. 
