@@ -8,8 +8,13 @@ _REQUIRED = [
     # TODO: remove this upper bound 
     # currently, when using ray we get:
     # "AttributeError: module 'pydantic._internal' has no attribute '_model_construction'"
+    "click",
     "pydantic>=2.0.0,<2.5.0",
     "wandb",
+
+    # for mamba stuff
+    "mamba_ssm", 
+    "causal_conv1d"
 ]
 
 _OPTIONAL = {
@@ -31,6 +36,10 @@ try:
 except ModuleNotFoundError:
     raise ValueError("Please install torch first: https://pytorch.org/get-started/locally/")
 
+try:
+    import transformers
+except ModuleNotFoundError:
+    raise ValueError("Please install transformers first: https://huggingface.co/transformers/installation.html")
 
 setup(
     name="zoology",

@@ -1,0 +1,3 @@
+[submodule "3rdparty/flash-linear-attention"]
+	path = 3rdparty/flash-linear-attention
+	url = https://github.com/fla-org/flash-linear-attention.git

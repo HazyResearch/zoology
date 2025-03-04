@@ -225,14 +225,20 @@ class LanguageModel(nn.Module):
         return self.lm_head(hidden_states)
     
     def state_size(self, sequence_length: int):
-        from zoology.mixers.mamba import MambaBlock
-        from zoology.mixers.mamba2 import Mamba2Block
+        try:
+            from zoology.mixers.mamba import MambaBlock
+        except:
+            MambaBlock = None
+        try:
+            from zoology.mixers.mamba2 import Mamba2Block
+        except:
+            Mamba2Block = None
 
         state_size = 0
         for layer in self.backbone.layers:
-            if isinstance(layer, MambaBlock):
+            if MambaBlock and isinstance(layer, MambaBlock):
                 mixer = layer.mixer
-            if isinstance(layer, Mamba2Block):
+            if Mamba2Block and isinstance(layer, Mamba2Block):
                 mixer = layer.mixer
             elif isinstance(layer, TransformerBlock):
                 mixer = layer.sequence_mixer

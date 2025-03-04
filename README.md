@@ -22,7 +22,7 @@ Zoology provides machine learning researchers with a simple playground for under
 
 ## Getting started
 
-**Installation.** First, ensure you have torch installed, or install it following the instructions [here](https://pytorch.org/get-started/locally/). Then, install Zoology with:
+**Installation.** First, ensure you have torch and transformers installed. You can install torch using the following the instructions [here](https://pytorch.org/get-started/locally/). Then, install Zoology with:
  
 ```bash
 git clone https://github.com/HazyResearch/zoology.git
@@ -30,6 +30,10 @@ cd zoology
 pip install -e .[extra,analysis] 
 ```
 If you want to keep this install as lightweight as possible; the only required dependencies are: `torch, einops, tqdm, pydantic, wandb`. There is some extra functionality (*e.g.* launching sweeps in parallel with Ray) that require additional dependencies. To install without the optional dependencies, run `pip install -e .`.
+
+Observations: 
+- The ``fla'' module (imported for GLA, RWKV-v7, etc.) is most compatible with Python 3.10+ 
+- The ``mamba_ssm'' module (imported for Mamba) is most compatible with PyTorch 2.5
 
 Then, try running an example experiment with: 
 ```
