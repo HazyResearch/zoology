@@ -28,7 +28,7 @@ class RWKV7Attention(nn.Module):
     def __init__(
         self,
         mode: str = 'chunk',
-        d_state: int = 1024,
+        d_model: int = 1024,
         head_dim: Optional[int] = 64,
         num_heads: Optional[int] = None,
         decay_low_rank_dim: int = 64,
@@ -44,7 +44,7 @@ class RWKV7Attention(nn.Module):
 
         self.mode = mode
         assert mode in ['chunk', 'fused_recurrent'], f"Not supported mode `{mode}`."
-        hidden_size = int(d_state)
+        hidden_size = int(d_model)
         self.hidden_size = hidden_size
 
         self.key_dim = hidden_size

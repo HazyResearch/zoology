@@ -19,6 +19,23 @@ Zoology provides machine learning researchers with a simple playground for under
 
 *I want to explore the Based architecture. How should I get started?* See our repository at [HazyResearch/based](https://github.com/HazyResearch/based) for the code we used to train and evaluate large Based language models. If you would like to reproduce the synthetic experiments from the Based paper, this is the right repository! See [zoology/experiments/arxiv24_based_figure2/README.md]() for instructions on how to reproduce the results. 
 
+## Models
+
+We have provided support for various efficient models. 
+
+| Year | Venue   | Model          | Title   |  Paper   |   
+| :--- | :------ | :------------- | :-------------------------------------------------------------------------------------------------------- | :------------------------------------------------: | 
+| 2023 | ICLR    | H3            | Hungry Hungry Hippos: Towards Language Modeling with State Space Models      |      [link](https://arxiv.org/abs/2212.14052)    |
+| 2023 | ICLR    | Hyena            | Hyena Hierarchy: Towards Larger Convolutional Language Models     |      [link](https://arxiv.org/abs/2302.10866)    |
+| 2024 | ICML    | GLA            | Gated Linear Attention Transformers with Hardware-Efficient Training                                      |      [link](https://arxiv.org/abs/2312.06635)    |
+| 2024 | ICML    | Based          | Simple linear attention language models balance the recall-throughput tradeoff                            |      [link](https://arxiv.org/abs/2402.18668)         |
+| 2024 | COLM    | Mamba          | Mamba: Linear-Time Sequence Modeling with Selective State Spaces|      [link](https://arxiv.org/abs/2312.00752)         |
+| 2024 | NeurIPS | DeltaNet       | Parallelizing Linear Transformers with Delta Rule  over Sequence Length                                   |      [link](https://arxiv.org/abs/2406.06484)   |
+| 2024 | ICML    | Mamba2         | Transformers are SSMs: Generalized Models and Efficient Algorithms Through Structured State Space Duality |      [link](https://arxiv.org/abs/2405.21060)       |
+| 2025 |         | RWKV7          |                                                                                                           |                                                       |
+
+<div align="center" >
+    <img src="zoology/analysis/paper/results.png" height=250 alt="Meerkat logo" style="margin-bottom:px"/> 
 
 ## Getting started
 

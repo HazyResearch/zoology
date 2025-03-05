@@ -204,10 +204,9 @@ def add_rwkv7(models, conv_mixer, input_seq_len, model_factory_kwargs):
             name="zoology.mixers.rwkv7.RWKV7Attention",
             kwargs={
                 "l_max": input_seq_len,
-                "d_state": d_model,
                 "head_dim": 64, 
                 "decay_low_rank_dim": 16,    # Same as head dim? 
-                "gate_low_rank_dim": 32,     # Tune
+                "gate_low_rank_dim": 64,     # Tune
                 "a_low_rank_dim": 16,        # Tune
                 "v_low_rank_dim": 16,        # Tune
             }
@@ -229,18 +228,44 @@ def add_rwkv7(models, conv_mixer, input_seq_len, model_factory_kwargs):
     return models
 
 
+# DeltaNet
+def add_delta_net(models, conv_mixer, input_seq_len, model_factory_kwargs):
+    block_type = "TransformerBlock"
+    for d_model in [64, 128, 256]: # 64, 
+        delta_net_mixer = dict(
+            name="zoology.mixers.delta_net.DeltaNet",
+            kwargs={
+                "l_max": input_seq_len,
+                "num_heads": 2,         # Tune
+                "use_beta": True,       # Tune
+                "use_gate": False,      # Tune
+                "use_short_conv": True, # Tune
+                "conv_size": 4
+            }
+        )
+        mixer = dict(
+            name="zoology.mixers.hybrid.Hybrid",
+            kwargs={"configs": [conv_mixer, delta_net_mixer]}
+        )
+        model = ModelConfig(
+            block_type="TransformerBlock",
+            d_model=d_model,
+            n_layers=2,
+            sequence_mixer=mixer,
+            max_position_embeddings=0,
+            name="delta_net",
+            **model_factory_kwargs
+        )
+        models.append(model)
+    return models
+
+
 
 #### TODO ####
 
 
 # GLA
 def add_gla(models):
-    block_type = "TransformerBlock"
-    pass
-    return models
-
-# DeltaNet
-def add_deltanet(models):
     block_type = "TransformerBlock"
     pass
     return models
