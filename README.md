@@ -32,10 +32,11 @@ We have provided support for various efficient models.
 | 2024 | COLM    | Mamba          | Mamba: Linear-Time Sequence Modeling with Selective State Spaces|      [link](https://arxiv.org/abs/2312.00752)         |
 | 2024 | NeurIPS | DeltaNet       | Parallelizing Linear Transformers with Delta Rule  over Sequence Length                                   |      [link](https://arxiv.org/abs/2406.06484)   |
 | 2024 | ICML    | Mamba2         | Transformers are SSMs: Generalized Models and Efficient Algorithms Through Structured State Space Duality |      [link](https://arxiv.org/abs/2405.21060)       |
-| 2025 |         | RWKV7          |                                                                                                           |                                                       |
+| 2025 ||RWKV7          |      |   
 
 <div align="center" >
-    <img src="zoology/analysis/paper/results.png" height=250 alt="Meerkat logo" style="margin-bottom:px"/> 
+    <img src="zoology/analysis/paper/results.png" height=250 alt="Meerkat logo" style="margin-bottom:px"/>
+</div> 
 
 ## Getting started
 
