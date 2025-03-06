@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import math
 from typing import TYPE_CHECKING, Dict, Optional, Tuple
 
 import torch
@@ -11,7 +12,8 @@ from einops import rearrange
 from torch.nn import functional as F
 
 from fla.modules import FusedRMSNormSwishGate, RMSNorm, ShortConvolution
-from fla.ops.delta_rule import chunk_delta_rule, fused_recurrent_delta_rule
+from fla.ops.gated_delta_rule import (chunk_gated_delta_rule,
+                                      fused_recurrent_gated_delta_rule)
 
 if TYPE_CHECKING:
     from transformers.processing_utils import Unpack
@@ -26,118 +28,134 @@ def elu_p1(x):
 def sum_norm(x):
     return (x / x.sum(-1, keepdim=True)).to(x)
 
+# https://github.com/IDSIA/recurrent-fwp/blob/master/algorithmic/layers.py#L86C1-L146C1
 
-class DeltaNet(nn.Module):
-    r"""
-    The layer implementaion for [Parallelizing Linear Transformers with the Delta Rule over Sequence Length](https://arxiv.org/abs/2406.06484).  # noqa:
-    DeltaNet was originally proposed in [Linear Transformers Are Secretly Fast Weight Programmers](https://arxiv.org/abs/2102.11174). # noqa
+
+class GatedDeltaNet(nn.Module):
+    """
+    The layer implementaion for [Gated Delta Networks: Improving Mamba2 with Delta Rule](https://arxiv.org/abs/2412.06464).  # noqa
+
+    Similar to Mamba2, each layer contains around 6*hidden_size*hidden_size parameters.
+    Parameter alloation when use_gate=True:
+        - 0.75 * hidden_size * hidden_size for the q_proj and k_proj each
+        - 1.5 * hidden_size * hidden_size for the v_proj, g_proj and o_proj each
+        - Others are ignorably small.
+        - In total = 0.75 * 2 + 1.5 * 3 = 6 * hidden_size * hidden_size
+    NOTE: num_heads * head_dim = 0.75 * hidden_size, please make sure to set the correct num_heads and head_dim.
+
+    Parameter allocation when use_gate=False:
+        - 1 * hidden_size * hidden_size for the q_proj and k_proj each
+        - 2 * hidden_size * hidden_size for the v_proj and o_proj each
+        - Others are ignorably small.
+        - In total = 1 * 2 + 2 * 2 = 6 * hidden_size * hidden_size
 
     Args:
-        mode (str, Optional):
-            Which DeltaNet kernel to use.
-            Currently available: `chunk`, `fused_recurrent`, and `fused_chunk`.
-            Default: `chunk`.
         hidden_size (int, Optional):
-            The hidden size of the input. Default: 1024.
-        expand_k (float, Optional):
-            The expansion ratio for the key dim. Default: 1.0.
+            The hidden size of the input. Default: 2048.
         expand_v (float, Optional):
-            The expansion ratio for the value dim. Default: 1.0.
+            The expansion ratio for the value dim. Default: 2.0.
+        head_dim (int, Optional):
+            The dimension of each head. Default: 256.
         num_heads (int, Optional):
             The number of heads. Default: 4.
+        mode (str, Optional):
+            Which Gated DeltaNet kernel to use.
+            Currently available: `chunk` and `fused_recurrent`.
+            Default: `chunk`.
         use_beta (bool, Optional):
             Whether to use beta. Default: `True`.
         use_gate (bool, Optional):
-            Whether to use output gate. Default: `False`.
+            Whether to use output gate. Default: `True`.
         use_short_conv (bool, Optional):
             Whether to use short convolutions. Default: `True`.
         conv_size (int, Optional):
             The kernel size of the short convolution, only used when `use_short_conv` is `True`. Default: 4.
         conv_bias (bool, Optional):
             Whether to use bias in the short convolution, only used when `use_short_conv` is `True`. Default: `False`.
-        allow_neg_eigval (bool, Optional):
-            Allow negative eigenvalues. Default: `False`. If set to `True`, the beta will be multiplied by 2.
-            See reference: [Unlocking State-Tracking in Linear RNNs Through Negative Eigenvalues](https://arxiv.org/abs/2411.12537)
         layer_idx (int, Optional):
             The index of the layer. Default: None.
         norm_eps (float, Optional):
-            The epsilon value for the layernorm/rmsnorm layer. Default: 1e-5.
-        qk_activation (str, Optional):
-            The activation function for the query and key. Default: `silu`.
-        qk_norm (str, Optional):
-            The normalization method for the query and key. Default: `l2`.
+            The epsilon value for the normalization layer. Default: 1e-5.
     """
 
     def __init__(
         self,
+        d_model: int = 2048,
+        expand_v: float = 2,
+        head_dim: int = 256,
+        num_heads: int = 6,
         mode: str = 'chunk',
-        d_model: int = None,
-        expand_k: float = 1.0,
-        expand_v: float = 1.0,
-        num_heads: int = 4,
-        use_beta: bool = True,
-        use_gate: bool = False,
+        use_gate: bool = True,
         use_short_conv: bool = True,
         conv_size: int = 4,
         conv_bias: bool = False,
-        allow_neg_eigval: bool = False,
         layer_idx: int = None,
-        qk_activation: str = 'silu',
-        qk_norm: str = 'l2',
         norm_eps: float = 1e-5,
         **kwargs
-    ) -> DeltaNet:
+    ) -> GatedDeltaNet:
         super().__init__()
 
         self.mode = mode
-        self.qk_activation = qk_activation
-        self.qk_norm = qk_norm
-
-        assert self.qk_activation in ['silu', 'relu', 'elu', 'identity']
-        assert self.qk_norm in ['l2', 'sum']
 
         hidden_size = int(d_model)
-        self.hidden_size = d_model
-        self.expand_k = expand_k
+        self.hidden_size = hidden_size
         self.expand_v = expand_v
-        self.num_heads = num_heads
+
         self.use_gate = use_gate
         self.use_short_conv = use_short_conv
         self.conv_size = conv_size
         self.conv_bias = conv_bias
-        self.allow_neg_eigval = allow_neg_eigval
 
-        self.key_dim = int(hidden_size * expand_k)
-        self.value_dim = int(hidden_size * expand_v)
-        self.head_k_dim = self.key_dim // num_heads
-        self.head_v_dim = self.value_dim // num_heads
+        self.head_dim = head_dim
+        self.num_heads = num_heads
+
+        self.key_dim = self.num_heads * self.head_dim
+        self.value_dim = self.key_dim * self.expand_v
+        self.head_k_dim = head_dim
+        self.head_v_dim = head_dim * self.expand_v
         self.layer_idx = layer_idx
-
         self.silu = nn.SiLU()
-        if mode == 'fused_chunk':
-            raise NotImplementedError("fused_chunk_delta_rule is now deprecated. Please use `chunk_delta_rule` instead.")
+
         assert mode in ['chunk', 'fused_recurrent'], f"Not suppoerted mode `{mode}`."
-        assert self.key_dim % num_heads == 0, f"key dim must be divisible by num_heads of {num_heads}"
-        assert self.value_dim % num_heads == 0, f"value dim must be divisible by num_heads of {num_heads}"
 
         self.q_proj = nn.Linear(hidden_size, self.key_dim, bias=False)
         self.k_proj = nn.Linear(hidden_size, self.key_dim, bias=False)
         self.v_proj = nn.Linear(hidden_size, self.value_dim, bias=False)
+        self.b_proj = nn.Linear(hidden_size, self.num_heads, bias=False)
+        self.a_proj = nn.Linear(hidden_size, self.num_heads, bias=False)
+        A = torch.empty(self.num_heads, dtype=torch.float32).uniform_(0, 16)
+        A_log = torch.log(A)
+        self.A_log = nn.Parameter(A_log)
+        self.A_log._no_weight_decay = True
+        self.D = nn.Parameter(torch.ones(self.num_heads))
+        self.D._no_weight_decay = True
+        # hard coded for now
+        dt_min = 0.001
+        dt_max = 0.1
+        dt_init_floor = 1e-4
+        dt = torch.exp(
+            torch.rand(self.num_heads) * (math.log(dt_max) - math.log(dt_min))
+            + math.log(dt_min)
+        )
+        dt = torch.clamp(dt, min=dt_init_floor)
+        # Inverse of softplus: https://github.com/pytorch/pytorch/issues/72759
+        inv_dt = dt + torch.log(-torch.expm1(-dt))
+        self.dt_bias = nn.Parameter(inv_dt)
+        # Just to be explicit. Without this we already don't put wd on dt_bias because of the check
+        # name.endswith("bias") in param_grouping.py
+        self.dt_bias._no_weight_decay = True
 
-        self.use_beta = use_beta
-        if self.use_beta:
-            self.b_proj = nn.Linear(hidden_size, self.num_heads, bias=False)
         if use_short_conv:
             self.conv_size = conv_size
             self.q_conv1d = ShortConvolution(
                 hidden_size=self.key_dim,
                 kernel_size=conv_size,
-                activation='silu' if qk_activation == 'silu' else None
+                activation='silu'
             )
             self.k_conv1d = ShortConvolution(
                 hidden_size=self.key_dim,
                 kernel_size=conv_size,
-                activation='silu' if qk_activation == 'silu' else None
+                activation='silu'
             )
             self.v_conv1d = ShortConvolution(
                 hidden_size=self.value_dim,
@@ -154,7 +172,6 @@ class DeltaNet(nn.Module):
             self.o_norm = FusedRMSNormSwishGate(self.head_v_dim, eps=norm_eps)
         else:
             self.o_norm = RMSNorm(self.head_v_dim, eps=norm_eps)
-
         self.o_proj = nn.Linear(self.value_dim, hidden_size, bias=False)
 
     def forward(
@@ -173,8 +190,11 @@ class DeltaNet(nn.Module):
                 "Arbitrary attention masks of shape [batch_size, seq_len, seq_len] are not allowed."
             )
 
-        # change to inference mode.
-        mode = 'fused_recurrent' if hidden_states.shape[1] <= 64 else self.mode
+        # mode = 'fused_recurrent' if hidden_states.shape[1] <= 64 else self.mode
+        mode = self.mode
+        # breakpoint()
+        if self.training:
+            assert mode == 'chunk', "Only chunk mode is supported in training."
 
         last_state = None
         if past_key_values is not None and len(past_key_values) > self.layer_idx:
@@ -202,69 +222,57 @@ class DeltaNet(nn.Module):
                                             output_final_state=use_cache,
                                             seq_idx=position_ids)
         else:
-            q = self.q_proj(hidden_states)
-            k = self.k_proj(hidden_states)
-            if self.qk_activation == 'silu':
-                q, k = self.silu(q), self.silu(k)
+            q = self.silu(self.q_proj(hidden_states))
+            k = self.silu(self.k_proj(hidden_states))
             v = self.silu(self.v_proj(hidden_states))
 
-        q, k = map(lambda x: rearrange(x, '... (h d) -> ... h d', d=self.head_k_dim), (q, k))
-        v = rearrange(v, '... (h d) -> ... h d', d=self.head_v_dim)
-        if self.qk_activation != 'silu':
-            if self.qk_activation == 'relu':
-                q, k = q.relu(), k.relu()
-            elif self.qk_activation == 'elu':
-                q, k = elu_p1(q), elu_p1(k)
-            elif self.qk_activation == 'identity':
-                pass
-            else:
-                raise NotImplementedError
-
-        if self.qk_norm == 'sum':
-            q = sum_norm(q).to(q)
-            k = sum_norm(k).to(k)
-
-        if self.use_beta:
-            beta = self.b_proj(hidden_states).sigmoid()
-        else:
-            beta = q.new_ones(q.shape[0], q.shape[1], q.shape[2])
-
-        if self.allow_neg_eigval:
-            beta = beta * 2.
+        q, k = map(lambda x: rearrange(x, 'b t (h d) -> b t h d', d=self.head_k_dim), (q, k))
+        v = rearrange(v, 'b t (h d) -> b t h d', d=self.head_v_dim)
+        beta = self.b_proj(hidden_states).sigmoid()
+        g = -self.A_log.float().exp() * F.softplus(self.a_proj(hidden_states).float() + self.dt_bias)
 
         # dealing with padding
         if attention_mask is not None:
             beta = beta.mul(attention_mask[:, -beta.shape[-2]:, None])
+            g = g.mul(attention_mask[:, -g.shape[-2]:, None])
+
+        # breakpoint()
+        # convert everything to bf16 
+        q = q.to(torch.bfloat16)
+        k = k.to(torch.bfloat16)
+        v = v.to(torch.bfloat16)
+        beta = beta.to(torch.bfloat16)
+        g = g.to(torch.bfloat16)
+
 
         recurrent_state = last_state['recurrent_state'] if last_state is not None else None
         cu_seqlens = kwargs.get('cu_seqlens', None)
-        if mode == 'fused_recurrent':
-            o, recurrent_state = fused_recurrent_delta_rule(
-                q=q.to(torch.bfloat16),
-                k=k.to(torch.bfloat16),
-                v=v.to(torch.bfloat16),
+        if mode == 'chunk':
+            o, recurrent_state = chunk_gated_delta_rule(
+                q=q,
+                k=k,
+                v=v,
+                g=g,
                 beta=beta,
                 initial_state=recurrent_state,
                 output_final_state=use_cache,
                 cu_seqlens=cu_seqlens,
                 head_first=False,
-                use_qk_l2norm_in_kernel=True if self.qk_norm == 'l2' else False
+                use_qk_l2norm_in_kernel=True
             )
-        elif mode == 'chunk':
-            o, recurrent_state = chunk_delta_rule(
-                q=q.to(torch.bfloat16),
-                k=k.to(torch.bfloat16),
-                v=v.to(torch.bfloat16),
+        elif mode == 'fused_recurrent':
+            o, recurrent_state = fused_recurrent_gated_delta_rule(
+                q=q,
+                k=k,
+                v=v,
+                g=g,
                 beta=beta,
                 initial_state=recurrent_state,
                 output_final_state=use_cache,
                 cu_seqlens=cu_seqlens,
                 head_first=False,
-                use_qk_l2norm_in_kernel=True if self.qk_norm == 'l2' else False
+                use_qk_l2norm_in_kernel=True
             )
-        else:
-            raise NotImplementedError(f"Not supported mode `{mode}`.")
-
         if past_key_values is not None:
             past_key_values.update(
                 recurrent_state=recurrent_state,
@@ -273,17 +281,16 @@ class DeltaNet(nn.Module):
                 offset=q.shape[1]
             )
 
-        o = o.float()
-
         if self.use_gate:
             g = rearrange(self.g_proj(hidden_states), '... (h d) -> ... h d', d=self.head_v_dim)
             o = self.o_norm(o, g)
         else:
             o = self.o_norm(o)
-        o = rearrange(o, 'b t h d -> b t (h d)')
+
+        o = rearrange(o, 'b t h d -> b t (h d)').to(torch.float32)
         o = self.o_proj(o)
 
-        return o#, None, past_key_values
+        return o #, None, past_key_values
 
     def state_size(self, sequence_length: int=2048):
         state_size = (
