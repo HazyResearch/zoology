@@ -82,7 +82,7 @@ class GatedDeltaNet(nn.Module):
         self,
         d_model: int = 2048,
         expand_v: float = 2,
-        head_dim: int = 256,
+        # head_dim: int = 256,
         num_heads: int = 6,
         mode: str = 'chunk',
         use_gate: bool = True,
@@ -106,8 +106,10 @@ class GatedDeltaNet(nn.Module):
         self.conv_size = conv_size
         self.conv_bias = conv_bias
 
-        self.head_dim = head_dim
+        # self.head_dim = head_dim
         self.num_heads = num_heads
+        self.head_dim = hidden_size // self.num_heads
+        head_dim = self.head_dim
 
         self.key_dim = self.num_heads * self.head_dim
         self.value_dim = self.key_dim * self.expand_v

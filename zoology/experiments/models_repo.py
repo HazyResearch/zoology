@@ -231,7 +231,7 @@ def add_rwkv7(models, conv_mixer, input_seq_len, model_factory_kwargs):
 # DeltaNet
 def add_delta_net(models, conv_mixer, input_seq_len, model_factory_kwargs):
     block_type = "TransformerBlock"
-    for d_model in [64, 128, 256]: # 64, 
+    for d_model in [64, 128, 256]: 
         delta_net_mixer = dict(
             name="zoology.mixers.delta_net.DeltaNet",
             kwargs={
@@ -260,15 +260,67 @@ def add_delta_net(models, conv_mixer, input_seq_len, model_factory_kwargs):
     return models
 
 
+# DeltaNet
+def add_gated_delta_net(models, conv_mixer, input_seq_len, model_factory_kwargs):
+    block_type = "TransformerBlock"
+    for d_model in [64, 128, 256]: 
+        delta_net_mixer = dict(
+            name="zoology.mixers.gated_delta_net.GatedDeltaNet",
+            kwargs={
+                "l_max": input_seq_len,
+                "num_heads": 2,         # Tune
+                "use_gate": False,      # Tune
+                "use_short_conv": True, # Tune
+                "conv_size": 4
+            }
+        )
+        mixer = dict(
+            name="zoology.mixers.hybrid.Hybrid",
+            kwargs={"configs": [conv_mixer, delta_net_mixer]}
+        )
+        model = ModelConfig(
+            block_type="TransformerBlock",
+            d_model=d_model,
+            n_layers=2,
+            sequence_mixer=mixer,
+            max_position_embeddings=0,
+            name="gated_delta_net",
+            **model_factory_kwargs
+        )
+        models.append(model)
+    return models
+
+
+# Gated linear attention
+def add_gla(models, conv_mixer, input_seq_len, model_factory_kwargs):
+    block_type = "TransformerBlock"
+    for d_model in [64, 128, 256]: 
+        delta_net_mixer = dict(
+            name="zoology.mixers.gla.GatedLinearAttention",
+            kwargs={
+                "num_heads": 2,          # Tune
+                "use_short_conv": False, # Tune (False default)
+            }
+        )
+        mixer = dict(
+            name="zoology.mixers.hybrid.Hybrid",
+            kwargs={"configs": [conv_mixer, delta_net_mixer]}
+        )
+        model = ModelConfig(
+            block_type="TransformerBlock",
+            d_model=d_model,
+            n_layers=2,
+            sequence_mixer=mixer,
+            max_position_embeddings=0,
+            name="gla",
+            **model_factory_kwargs
+        )
+        models.append(model)
+    return models
+
 
 #### TODO ####
 
-
-# GLA
-def add_gla(models):
-    block_type = "TransformerBlock"
-    pass
-    return models
 
 # Deepseek NSA
 def add_deepseek_nsa(models):

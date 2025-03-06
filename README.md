@@ -25,18 +25,23 @@ We have provided support for various efficient models.
 
 | Year | Venue   | Model          | Title   |  Paper   |   
 | :--- | :------ | :------------- | :-------------------------------------------------------------------------------------------------------- | :------------------------------------------------: | 
+| 2021 | NeurIPS    | Scatterbrain | Scatterbrain: Unifying Sparse and Low-rank Attention Approximation |  [link](https://arxiv.org/abs/2110.15343)    |
 | 2023 | ICLR    | H3            | Hungry Hungry Hippos: Towards Language Modeling with State Space Models      |      [link](https://arxiv.org/abs/2212.14052)    |
 | 2023 | ICLR    | Hyena            | Hyena Hierarchy: Towards Larger Convolutional Language Models     |      [link](https://arxiv.org/abs/2302.10866)    |
 | 2024 | ICML    | GLA            | Gated Linear Attention Transformers with Hardware-Efficient Training                                      |      [link](https://arxiv.org/abs/2312.06635)    |
 | 2024 | ICML    | Based          | Simple linear attention language models balance the recall-throughput tradeoff                            |      [link](https://arxiv.org/abs/2402.18668)         |
+| 2024 | ICML    | Mamba2         | Transformers are SSMs: Generalized Models and Efficient Algorithms Through Structured State Space Duality |      [link](https://arxiv.org/abs/2405.21060)       |
 | 2024 | COLM    | Mamba          | Mamba: Linear-Time Sequence Modeling with Selective State Spaces|      [link](https://arxiv.org/abs/2312.00752)         |
 | 2024 | NeurIPS | DeltaNet       | Parallelizing Linear Transformers with Delta Rule  over Sequence Length                                   |      [link](https://arxiv.org/abs/2406.06484)   |
-| 2024 | ICML    | Mamba2         | Transformers are SSMs: Generalized Models and Efficient Algorithms Through Structured State Space Duality |      [link](https://arxiv.org/abs/2405.21060)       |
+| 2025 | ICLR | Gated DeltaNet       | Gated Delta Networks: Improving Mamba2 with Delta Rule   |      [link](https://arxiv.org/abs/2412.06464)   |
+
 | 2025 ||RWKV7          |      |   
 
 <div align="center" >
-    <img src="zoology/analysis/paper/results.png" height=250 alt="Meerkat logo" style="margin-bottom:px"/>
+    <img src="zoology/analysis/paper/results.png" height=300 alt="MQAR Plot" style="margin-bottom:px"/>
 </div> 
+
+Note that state size is a proxy for model efficiency, however it is also worth considering the wall-clock speed required to use different state sizes for a particular architecture choice. 
 
 ## Getting started
 
@@ -50,8 +55,8 @@ pip install -e .[extra,analysis]
 If you want to keep this install as lightweight as possible; the only required dependencies are: `torch, einops, tqdm, pydantic, wandb`. There is some extra functionality (*e.g.* launching sweeps in parallel with Ray) that require additional dependencies. To install without the optional dependencies, run `pip install -e .`.
 
 Observations: 
-- The ``fla'' module (imported for GLA, RWKV-v7, etc.) is most compatible with Python 3.10+ 
-- The ``mamba_ssm'' module (imported for Mamba) is most compatible with PyTorch 2.5
+- The ```fla``` module (imported for GLA, RWKV-v7, etc.) is most compatible with Python 3.10+ Further, if you use an H100 GPU and incur issues with triton, you may find this issue helpful: [issue](https://github.com/fla-org/flash-linear-attention/issues/196).
+- The ```mamba_ssm``` module (imported for Mamba) is most compatible with PyTorch 2.5
 
 Then, try running an example experiment with: 
 ```

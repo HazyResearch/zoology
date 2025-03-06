@@ -9,6 +9,22 @@ import matplotlib.pyplot as plt
 from zoology.analysis.utils import fetch_wandb_runs
 
 
+model2color = {
+    "Hyena": "#BAB0AC",
+    "H3": "#B07AA1",
+    
+    'Attention': "black", 
+    'Sliding window attention': "black", 
+
+    'Based': "#59A14F", # "#F28E2B"
+    "Mamba2": "#4E79A7",
+    'Gated delta net': "#9C755F", 
+    'Rwkv7': "#EDC948", 
+    'Mamba': "#76B7B2", 
+    'Delta net': "#E15759", 
+    'Gla': "#F28E2B",
+}
+
 def plot(
     df: pd.DataFrame,
     metric: str="valid/accuracy",
@@ -37,6 +53,7 @@ def plot(
         marker="o",
         height=5,
         aspect=1,
+        palette=model2color,
     )
     g.set(xscale="log", ylabel="MQAR Accuracy", xlabel="State Size")
 
@@ -66,6 +83,11 @@ if __name__ == "__main__" :
             "default-2025-03-05-14-59-58",
 
             # Adding Gated DeltaNet
+            "default-2025-03-05-16-20-42",
+            "default-2025-03-05-16-41-32",
+
+            # Adding Gated Linear Attention (GLA)
+            "default-2025-03-05-16-01-15",
         ], 
         project_name="0325_zoology"
     )
