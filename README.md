@@ -35,7 +35,7 @@ We have provided support for various efficient models.
 | 2024 | NeurIPS | DeltaNet       | Parallelizing Linear Transformers with Delta Rule  over Sequence Length                                   |      [link](https://arxiv.org/abs/2406.06484)   |
 | 2025 | ICLR | Gated DeltaNet       | Gated Delta Networks: Improving Mamba2 with Delta Rule   |      [link](https://arxiv.org/abs/2412.06464)   |
 | 2025 ||RWKV7          |      |   
-| 2025 ||DeepSeek Native Sparse Attention   |  [link](https://arxiv.org/pdf/2502.11089)   |  
+| 2025 ||DeepSeek Native Sparse Attention   | Native Sparse Attention: Hardware-Aligned and Natively Trainable Sparse Attention | [link](https://arxiv.org/pdf/2502.11089)   |  
 
 <div align="center" >
     <img src="zoology/analysis/paper/results.png" height=300 alt="MQAR Plot" style="margin-bottom:px"/>
