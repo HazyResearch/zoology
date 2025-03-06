@@ -34,7 +34,6 @@ We have provided support for various efficient models.
 | 2024 | COLM    | Mamba          | Mamba: Linear-Time Sequence Modeling with Selective State Spaces|      [link](https://arxiv.org/abs/2312.00752)         |
 | 2024 | NeurIPS | DeltaNet       | Parallelizing Linear Transformers with Delta Rule  over Sequence Length                                   |      [link](https://arxiv.org/abs/2406.06484)   |
 | 2025 | ICLR | Gated DeltaNet       | Gated Delta Networks: Improving Mamba2 with Delta Rule   |      [link](https://arxiv.org/abs/2412.06464)   |
-
 | 2025 ||RWKV7          |      |   
 
 <div align="center" >
