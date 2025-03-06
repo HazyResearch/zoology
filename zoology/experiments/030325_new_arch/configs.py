@@ -5,7 +5,7 @@ from zoology.data.associative_recall import MQARConfig
 
 
 sweep_id = uuid.uuid4().hex[:6]
-sweep_name = "gated-delta-net-v0" + sweep_id
+sweep_name = "deepseek-v3-blocksize=8-swa-16-selected=4" + sweep_id
 
 VOCAB_SIZE = 8_192
 
@@ -56,15 +56,16 @@ conv_mixer = dict(
 )
 
 
-from zoology.experiments.models_repo import add_attention, add_based, add_mamba2, add_rwkv7, add_delta_net, add_gla, add_gated_delta_net
+from zoology.experiments.models_repo import add_attention, add_based, add_mamba2, add_rwkv7, add_delta_net, add_gla, add_gated_delta_net, add_deepseek_nsa
 
 models = add_delta_net(models, conv_mixer, input_seq_len, model_factory_kwargs)
 models = add_rwkv7(models, conv_mixer, input_seq_len, model_factory_kwargs)
 models = add_gla(models, conv_mixer, input_seq_len, model_factory_kwargs)
 models = add_gated_delta_net(models, conv_mixer, input_seq_len, model_factory_kwargs)
+models = add_deepseek_nsa(models, conv_mixer, input_seq_len, model_factory_kwargs)
 
 # convenience for filtering out 
-included = ["gated_delta_net"]
+included = ["deepseek_nsa"]
 models = [m for m in models if any([i in m.name for i in included])]
 
 

@@ -44,8 +44,6 @@ class SlidingAttn(nn.Module):
         super().__init__()
         self.d_model = d_model
         print(f"SlidingAttn: d_model={d_model}, block_size={block_size}")
-        import time
-        time.sleep(10)
         self.Wqkv = nn.Linear(d_model, 3 * d_model, bias=bias)
         self.inner_attn = SlidingSelfAttention(block_size=block_size, 
                                          attention_dropout=dropout)

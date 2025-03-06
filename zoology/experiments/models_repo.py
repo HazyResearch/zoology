@@ -319,12 +319,33 @@ def add_gla(models, conv_mixer, input_seq_len, model_factory_kwargs):
     return models
 
 
-#### TODO ####
-
-
 # Deepseek NSA
-def add_deepseek_nsa(models):
+def add_deepseek_nsa(models, conv_mixer, input_seq_len, model_factory_kwargs):
     block_type = "TransformerBlock"
-    pass
+    for d_model in [64, 128, 256]: 
+        delta_net_mixer = dict(
+            name="zoology.mixers.deepseek_nsa.SparseAttention",
+            kwargs={
+                "num_heads": 2,            # Tune
+                "sliding_window_size": 16, # Tune
+                "compress_block_size": 8, # Tune
+                "selection_block_size": 8, # Tune
+                "num_selected_blocks": 4,   # Tune
+            }
+        )
+        mixer = dict(
+            name="zoology.mixers.hybrid.Hybrid",
+            kwargs={"configs": [conv_mixer, delta_net_mixer]}
+        )
+        model = ModelConfig(
+            block_type="TransformerBlock",
+            d_model=d_model,
+            n_layers=2,
+            sequence_mixer=mixer,
+            max_position_embeddings=0,
+            name="deepseek_nsa",
+            **model_factory_kwargs
+        )
+        models.append(model)
     return models
 
