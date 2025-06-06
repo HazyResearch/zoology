@@ -28,6 +28,7 @@ We have provided support for various efficient models.
 | Oct 2021  | NeurIPS    | Scatterbrain   | Scatterbrain: Unifying Sparse and Low-rank Attention Approximation           |  [link](https://arxiv.org/abs/2110.15343)    |
 | Jan 2023  | ICLR       | H3             | Hungry Hungry Hippos: Towards Language Modeling with State Space Models      |  [link](https://arxiv.org/abs/2212.14052)    |
 | Feb 2023  | ICLR       | Hyena          | Hyena Hierarchy: Towards Larger Convolutional Language Models                |  [link](https://arxiv.org/abs/2302.10866)    |
+| July 2023  | ICLR       | RetNet         | Retentive Network: A Successor to Transformer for Large Language Models                |  [link](https://arxiv.org/abs/2307.08621)    |
 | Dec 2023  | ICLR       | Input-dependent sparse attention          | Zoology: Measuring and Improving Recall in Efficient Language Models         |      [link](https://arxiv.org/abs/2312.04927)         |
 | Dec 2023  | COLM       | Mamba          | Mamba: Linear-Time Sequence Modeling with Selective State Spaces             |  [link](https://arxiv.org/abs/2312.00752)         |
 | Dec 2023  | ICML       | GLA            | Gated Linear Attention Transformers with Hardware-Efficient Training         |  [link](https://arxiv.org/abs/2312.06635)    |
@@ -42,7 +43,7 @@ We have provided support for various efficient models.
     <img src="zoology/analysis/paper/results.png" height=300 alt="MQAR Plot" style="margin-bottom:px"/>
 </div> 
 
-Note that state size is a proxy for model efficiency, however it is also worth considering the wall-clock speed required to use different state sizes for a particular architecture choice. 
+**Notes:** that state size is a proxy for model efficiency, however it is also worth considering the wall-clock speed required to use different state sizes for a particular architecture choice. Note that we use the *BASED* recipe for these architectures, where we hybridize the sequence mixer with a short convolution for fair comparison. Pre-BASED linear attention architectures like RetNet, GLA typically did not use short convolutions/short local mixers.
 
 ## Getting started
 
