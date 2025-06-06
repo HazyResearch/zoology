@@ -25,17 +25,18 @@ We have provided support for various efficient models.
 
 | Year | Venue   | Model          | Title   |  Paper   |   
 | :--- | :------ | :------------- | :-------------------------------------------------------------------------------------------------------- | :------------------------------------------------: | 
-| 2021 | NeurIPS    | Scatterbrain | Scatterbrain: Unifying Sparse and Low-rank Attention Approximation |  [link](https://arxiv.org/abs/2110.15343)    |
-| 2023 | ICLR    | H3            | Hungry Hungry Hippos: Towards Language Modeling with State Space Models      |      [link](https://arxiv.org/abs/2212.14052)    |
-| 2023 | ICLR    | Hyena            | Hyena Hierarchy: Towards Larger Convolutional Language Models     |      [link](https://arxiv.org/abs/2302.10866)    |
-| 2024 | ICML    | GLA            | Gated Linear Attention Transformers with Hardware-Efficient Training                                      |      [link](https://arxiv.org/abs/2312.06635)    |
-| 2024 | ICML    | Based          | Simple linear attention language models balance the recall-throughput tradeoff                            |      [link](https://arxiv.org/abs/2402.18668)         |
-| 2024 | ICML    | Mamba2         | Transformers are SSMs: Generalized Models and Efficient Algorithms Through Structured State Space Duality |      [link](https://arxiv.org/abs/2405.21060)       |
-| 2024 | COLM    | Mamba          | Mamba: Linear-Time Sequence Modeling with Selective State Spaces|      [link](https://arxiv.org/abs/2312.00752)         |
-| 2024 | NeurIPS | DeltaNet       | Parallelizing Linear Transformers with Delta Rule  over Sequence Length                                   |      [link](https://arxiv.org/abs/2406.06484)   |
-| 2025 | ICLR | Gated DeltaNet       | Gated Delta Networks: Improving Mamba2 with Delta Rule   |      [link](https://arxiv.org/abs/2412.06464)   |
-| 2025 |   ArXiv   |  RWKV7   |    RWKV-7 "Goose" with Expressive Dynamic State Evolution  |     [link](https://arxiv.org/abs/2503.14456)    |
-| 2025 |   ArXiv    |DeepSeek Native Sparse Attention   | Native Sparse Attention: Hardware-Aligned and Natively Trainable Sparse Attention | [link](https://arxiv.org/pdf/2502.11089)   |  
+| Oct 2021  | NeurIPS    | Scatterbrain   | Scatterbrain: Unifying Sparse and Low-rank Attention Approximation           |  [link](https://arxiv.org/abs/2110.15343)    |
+| Jan 2023  | ICLR       | H3             | Hungry Hungry Hippos: Towards Language Modeling with State Space Models      |  [link](https://arxiv.org/abs/2212.14052)    |
+| Feb 2023  | ICLR       | Hyena          | Hyena Hierarchy: Towards Larger Convolutional Language Models                |  [link](https://arxiv.org/abs/2302.10866)    |
+| Dec 2023  | ICLR       | Input-dependent sparse attention          | Zoology: Measuring and Improving Recall in Efficient Language Models         |      [link](https://arxiv.org/abs/2312.04927)         |
+| Dec 2023  | COLM       | Mamba          | Mamba: Linear-Time Sequence Modeling with Selective State Spaces             |  [link](https://arxiv.org/abs/2312.00752)         |
+| Dec 2023  | ICML       | GLA            | Gated Linear Attention Transformers with Hardware-Efficient Training         |  [link](https://arxiv.org/abs/2312.06635)    |
+| Dec 2023  | ICML       | Based          | Simple linear attention language models balance the recall-throughput tradeoff   |      [link](https://arxiv.org/abs/2402.18668)         |
+| June 2024 | ICML       | Mamba2         | Transformers are SSMs: Generalized Models and Efficient Algorithms Through Structured State Space Duality |      [link](https://arxiv.org/abs/2405.21060)       |
+| June 2024 | NeurIPS    | DeltaNet       | Parallelizing Linear Transformers with Delta Rule  over Sequence Length      |      [link](https://arxiv.org/abs/2406.06484)   |
+| Dec 2024  | ICLR       | Gated DeltaNet | Gated Delta Networks: Improving Mamba2 with Delta Rule                       |      [link](https://arxiv.org/abs/2412.06464)   |
+| Feb 2025  | ArXiv      | DeepSeek Native sparse attention   | Native Sparse Attention: Hardware-Aligned and Natively Trainable Sparse Attention | [link](https://arxiv.org/pdf/2502.11089)   | 
+| Mar 2025  | ArXiv      |  RWKV7         |    RWKV-7 "Goose" with Expressive Dynamic State Evolution                    |      [link](https://arxiv.org/abs/2503.14456)    | 
 
 <div align="center" >
     <img src="zoology/analysis/paper/results.png" height=300 alt="MQAR Plot" style="margin-bottom:px"/>
