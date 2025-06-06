@@ -43,7 +43,10 @@ We have provided support for various efficient models.
     <img src="zoology/analysis/paper/results.png" height=300 alt="MQAR Plot" style="margin-bottom:px"/>
 </div> 
 
-**Notes:** that state size is a proxy for model efficiency, however it is also worth considering the wall-clock speed required to use different state sizes for a particular architecture choice. Note that we use the *BASED* recipe for these architectures, where we hybridize the sequence mixer with a short convolution for fair comparison. Pre-BASED linear attention architectures like RetNet, GLA typically did not use short convolutions/short local mixers.
+**Notes:** 
+1. State size is a *proxy* for model efficiency, however it is also worth considering the wall-clock speed required to use different state sizes for a particular architecture choice. 
+2. We give the *BASED* recipe to these architectures, where we hybridize the sequence mixer with a short convolution, for fair comparison. Pre-BASED linear attention architectures like RetNet, GLA typically did not use short convolutions/short local mixers.
+3. MQAR is a useful but simplistic synthetic. We wholeheartedly welcome contributions for new synthetics (MQAR variants) that test additional skills -- feel free to make a PR or email us!
 
 ## Getting started
 
