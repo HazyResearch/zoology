@@ -43,6 +43,16 @@ def plot(
     # replace model column name with "Model"
     plot_df = plot_df.rename(columns={"model.name": "Model"})
 
+
+    # (06/05) adjust the state sizes for rwkv v7
+    rwkv_mask = (plot_df["Model"] == "Rwkv7")
+    rwkv_mask_128 = (plot_df["Model"] == "Rwkv7") & (plot_df["model.d_model"] == 128)
+    rwkv_mask_256 = (plot_df["Model"] == "Rwkv7") & (plot_df["model.d_model"] == 256)
+    print(plot_df[['Model', 'state_size', 'model.d_model']][rwkv_mask_128 | rwkv_mask_256])
+    plot_df.loc[rwkv_mask_128, "state_size"] /= 4
+    plot_df.loc[rwkv_mask_256, "state_size"] /= 16
+    print(plot_df[['Model', 'state_size', 'model.d_model']][rwkv_mask])
+
     sns.set_theme(style="whitegrid")
     g = sns.relplot(
         data=plot_df,

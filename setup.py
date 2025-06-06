@@ -9,12 +9,12 @@ _REQUIRED = [
     # currently, when using ray we get:
     # "AttributeError: module 'pydantic._internal' has no attribute '_model_construction'"
     "click",
-    "pydantic>=2.0.0,<2.5.0",
+    "pydantic",
     "wandb",
 
     # for mamba stuff
-    "mamba_ssm", 
-    "causal_conv1d"
+    # "mamba_ssm", 
+    # "causal_conv1d"
 ]
 
 _OPTIONAL = {
