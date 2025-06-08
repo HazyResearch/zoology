@@ -23,6 +23,8 @@ Zoology provides machine learning researchers with a simple playground for under
 
 We have provided support for various efficient models. 
 
+**If using the Zoology RWKV-7 file from between March 25th-June 5, please note that the state size computation needs to be updated**
+
 | Year | Venue   | Model          | Title   |  Paper   |   
 | :--- | :------ | :------------- | :-------------------------------------------------------------------------------------------------------- | :------------------------------------------------: | 
 | Oct 2021  | NeurIPS    | Scatterbrain   | Scatterbrain: Unifying Sparse and Low-rank Attention Approximation           |  [link](https://arxiv.org/abs/2110.15343)    |
