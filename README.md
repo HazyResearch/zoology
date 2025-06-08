@@ -19,11 +19,11 @@ Zoology provides machine learning researchers with a simple playground for under
 
 *I want to explore the Based architecture. How should I get started?* See our repository at [HazyResearch/based](https://github.com/HazyResearch/based) for the code we used to train and evaluate large Based language models. If you would like to reproduce the synthetic experiments from the Based paper, this is the right repository! See [zoology/experiments/arxiv24_based_figure2/README.md]() for instructions on how to reproduce the results. 
 
+**Important: If using the Zoology RWKV-7 file from between March 25th-June 5, please note that the state size computation needs to be updated**
+
 ## Models
 
 We have provided support for various efficient models. 
-
-**If using the Zoology RWKV-7 file from between March 25th-June 5, please note that the state size computation needs to be updated**
 
 | Year | Venue   | Model          | Title   |  Paper   |   
 | :--- | :------ | :------------- | :-------------------------------------------------------------------------------------------------------- | :------------------------------------------------: | 
