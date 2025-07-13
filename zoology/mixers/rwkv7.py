@@ -209,7 +209,7 @@ class RWKV7Attention(nn.Module):
 
     def state_size(self, sequence_length: int=2048):
         return (
-            self.num_heads * self.head_dim * self.value_dim
+            self.num_heads * self.head_dim * self.head_dim
         )
 
 
