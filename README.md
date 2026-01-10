@@ -85,10 +85,10 @@ This repository has been used to produce results in a few papers on efficient la
 The configs, instructions and plotting code for reproducing the figures in these papers are provided in the following sub-folders. 
 
 - [Zoology: Measuring and improving recall in efficient language models](https://arxiv.org/abs/2312.04927)
-    - zoology/experiments/iclr24_zoology_figure2
+    - ./zoology/experiments/paper_configs/iclr24_zoology_figure2
 - [Based: Simple linear attention balances the recall-throughput tradeoff]()
-    - zoology/experiments/paper_configs/arxiv24_based_figure2
-    - zoology/experiments/paper_configs/arxiv24_based_figure3
+    - ./zoology/experiments/paper_configs/arxiv24_based_figure2
+    - ./zoology/experiments/paper_configs/arxiv24_based_figure3
 
 ## Configuration, Experiments, and Sweeps
 In this section, we'll walk through how to configure an experiment and launch sweeps. 
@@ -204,6 +204,11 @@ config = TrainConfig(
 
 
 **Caching dataset creation.** Sometimes it's useful to cache the dataset creation process, especially if it's expensive. To do so you can pass a `cache_dir` to the `DataConfig`: `DataConfig(..., cache_dir="my_cache_dir")`.
+
+
+## Plotting and analysis
+
+See the example plotting code in  ```zoology/analysis/mqar_plotting_example.py``` for how we produced a graph like the one at the top of this README, using the wandb logged outputs of experiment sweeps. 
 
 
 

@@ -23,9 +23,12 @@ model2color = {
     'Mamba': "#76B7B2", 
     'Delta net': "#E15759", 
     'Gla': "#F28E2B",
+
+    'Ttt linear': "#D3722C",
+    'Ttt mlp': "#EDC948",
 }
 
-order = [
+graph_order = [
     "Attention",
     "Sliding Window",
     "H3",
@@ -37,6 +40,8 @@ order = [
     "DeltaNet",
     "RWKV-7",
     "Gated DeltaNet",
+    'TTT Linear',
+    'TTT MLP',
 ]
 
 name_replacements = {
@@ -47,6 +52,8 @@ name_replacements = {
     "Delta net": "DeltaNet",
     "Gated delta net": "Gated DeltaNet",
     "Sliding window attention": "Sliding Window",
+    "Ttt linear": "TTT Linear",
+    "Ttt mlp": "TTT MLP",
 }
 
 def _normalize_model_key(s: str) -> str:
@@ -100,7 +107,6 @@ def plot(
     plot_df["Model"] = _apply_name_replacements(plot_df["model.name"])
     # plot_df = plot_df.rename(columns={"model.name": "Model"})
 
-
     # (06/05) adjust the state sizes for rwkv v7
     rwkv_mask = (plot_df["Model"] == "Rwkv7")
     rwkv_mask_128 = (plot_df["Model"] == "Rwkv7") & (plot_df["model.d_model"] == 128)
@@ -112,6 +118,12 @@ def plot(
 
     palette = _mapped_palette(model2color, name_replacements)
 
+    # exclude models in list
+    list_to_exclude = ["Mamba", "RWKV-7", "GLA"]
+    plot_df = plot_df[~plot_df["Model"].isin(list_to_exclude)]
+    filtered_order = [o for o in graph_order if o not in list_to_exclude]
+    palette = {k: v for k, v in palette.items() if k not in list_to_exclude}
+
     # sns.set_theme(style="whitegrid")
     g = sns.relplot(
         data=plot_df,
@@ -120,7 +132,7 @@ def plot(
         hue="Model",
         kind="scatter",
         marker="o",
-        hue_order=order,           # enforce your order
+        hue_order=filtered_order,           # enforce your order
         height=5,
         aspect=1,
         palette=palette,
@@ -131,13 +143,12 @@ def plot(
     g.set(xscale="log", ylabel="Recall Accuracy", xlabel="State Size (log scale)")
 
     ax = g.ax
-    ax.set_xlabel("State Size (log scale)", fontsize=16, fontweight="bold")
-    ax.set_ylabel("Recall Accuracy", fontsize=16, fontweight="bold")
+    ax.set_xlabel("State Size (log scale)", fontsize=16)
+    ax.set_ylabel("Recall Accuracy", fontsize=16)
     if g._legend is not None:
-        g._legend.set_title("Model", prop={"weight": "bold", "size": 16})
-
+        g._legend.set_title("Model", prop={"size": 16})
     #title
-    ax.set_title("Recall-Memory Tradeoff", fontsize=16, fontweight="bold")
+    ax.set_title("MQAR (Standard)", fontsize=16)
 
 
     ax = g.ax
@@ -181,6 +192,7 @@ if __name__ == "__main__" :
             "default-2025-03-04-15-11-23"
 
             # Adding NSA
+            "default-2025-03-06-11-46-30",
 
             # Adding DeltaNet
             "default-2025-03-05-14-30-11",
@@ -193,6 +205,11 @@ if __name__ == "__main__" :
 
             # Adding Gated Linear Attention (GLA)
             "default-2025-03-05-16-01-15",
+
+            # Adding TTT Linear
+            "default-2026-01-09-20-46-16",
+            # Adding TTT MLP
+            "default-2026-01-09-22-37-36",
         ], 
         project_name="0325_zoology"
     )
