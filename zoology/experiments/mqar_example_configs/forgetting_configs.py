@@ -5,7 +5,7 @@ from zoology.data.forgetting_ar import ForgettingMQARConfig as MQARConfig
 
 
 sweep_id = uuid.uuid4().hex[:6]
-sweep_name = "010926-forgetting-sweep-w-deepseek-nsa" + sweep_id
+sweep_name = "forgetting-sweep" + sweep_id
 
 VOCAB_SIZE = 8_192
 
@@ -75,9 +75,9 @@ models = add_ttt(models, conv_mixer, input_seq_len, model_factory_kwargs)
 
 # convenience for filtering out 
 included = [
-    # "attention", "sliding_window", "delta_net", "gla", "gated_delta_net", 
+    "attention", "sliding_window", "delta_net", "gla", "gated_delta_net", 
     "deepseek_nsa", 
-    # "ttt_linear", "ttt_mlp"
+    "ttt_linear", "ttt_mlp"
 ]
 models = [m for m in models if any([i in m.name for i in included])]
 

@@ -67,11 +67,15 @@ Observations:
 
 Then, try running an example experiment with: 
 ```bash
-python -m zoology.launch zoology/experiments/examples/basic.py
+python -m zoology.launch zoology/experiments/basic_examples/basic.py
 ```
 This will train a simple two layer transformer on multi-query associative recall. To run a sweep over learning rates, try: 
 ```bash
-python -m zoology.launch zoology/experiments/examples/basic_sweep.py
+python -m zoology.launch zoology/experiments/basic_examples/basic_sweep.py
+```
+For a more complete sweep of models, similar to the above Recall-Memory Tradeoff figure, you can use:
+```bash
+python -m zoology.launch zoology/experiments/mqar_example_configs/original_mqar_configs.py -p 
 ```
 If you have access to multiple GPUs, you can run the sweep in parallel by adding the `-p` flag.
 
@@ -83,8 +87,8 @@ The configs, instructions and plotting code for reproducing the figures in these
 - [Zoology: Measuring and improving recall in efficient language models](https://arxiv.org/abs/2312.04927)
     - zoology/experiments/iclr24_zoology_figure2
 - [Based: Simple linear attention balances the recall-throughput tradeoff]()
-    - zoology/experiments/arxiv24_based_figure2
-    - zoology/experiments/arxiv24_based_figure3
+    - zoology/experiments/paper_configs/arxiv24_based_figure2
+    - zoology/experiments/paper_configs/arxiv24_based_figure3
 
 ## Configuration, Experiments, and Sweeps
 In this section, we'll walk through how to configure an experiment and launch sweeps. 
@@ -121,12 +125,12 @@ fn(torch.tensor([2,4,3])) # [4, 3, 2]
 config = TrainConfig(...)
 configs = [config]
 ```
-See [`zoology/experiments/examples/basic.py`](zoology/experiments/examples/basic.py) for an example. 
+See [`zoology/experiments/examples/basic.py`](zoology/experiments/basic_examples/basic.py) for an example. 
 
 Then run `python -m zoology.launch zoology/experiments/examples/basic.py`, replacing `basic.py` with the path to your experiment. This will launch a single training job. 
 
 
-*Launching sweeps.* To launch a sweep, simply add more configuration objects to the `configs` list. For example, here's the content of [`zoology/experiments/examples/basic_sweep.py`](zoology/experiments/examples/basic_sweep.py):
+*Launching sweeps.* To launch a sweep, simply add more configuration objects to the `configs` list. For example, here's the content of [`zoology/experiments/examples/basic_sweep.py`](zoology/experiments/basic_examples/basic_sweep.py):
 ```python
 import numpy as np
 from zoology.config import TrainConfig

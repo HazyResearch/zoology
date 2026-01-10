@@ -5,28 +5,28 @@ from zoology.data.compositional_ar import CompositionalMQARConfig as MQARConfig
 
 
 sweep_id = uuid.uuid4().hex[:6]
-sweep_name = "010926-compositional-sweep-w-deepseek-nsa" + sweep_id
+sweep_name = "compositional-random-false-sweep" + sweep_id
 
 VOCAB_SIZE = 8_192
 
 # 1. First we are going to create the data configuration
 
 train_configs = [    
-    MQARConfig(vocab_size=VOCAB_SIZE, input_seq_len=64, num_examples=100_000, num_kv_pairs=4),    
-    MQARConfig(vocab_size=VOCAB_SIZE, input_seq_len=128, num_examples=20_000, num_kv_pairs=9),   
-    MQARConfig(vocab_size=VOCAB_SIZE, input_seq_len=256, num_examples=20_000, num_kv_pairs=16),
-    MQARConfig(vocab_size=VOCAB_SIZE, input_seq_len=256, num_examples=20_000, num_kv_pairs=25),
-    MQARConfig(vocab_size=VOCAB_SIZE, input_seq_len=256, num_examples=20_000, num_kv_pairs=36), 
+    MQARConfig(vocab_size=VOCAB_SIZE, input_seq_len=64, num_examples=100_000, num_kv_pairs=4, random_non_queries=False),    
+    MQARConfig(vocab_size=VOCAB_SIZE, input_seq_len=128, num_examples=20_000, num_kv_pairs=9, random_non_queries=False),   
+    MQARConfig(vocab_size=VOCAB_SIZE, input_seq_len=256, num_examples=20_000, num_kv_pairs=16, random_non_queries=False),
+    MQARConfig(vocab_size=VOCAB_SIZE, input_seq_len=256, num_examples=20_000, num_kv_pairs=25, random_non_queries=False),
+    MQARConfig(vocab_size=VOCAB_SIZE, input_seq_len=256, num_examples=20_000, num_kv_pairs=36, random_non_queries=False), 
 ]
 
 test_configs = [
-    MQARConfig(vocab_size=VOCAB_SIZE, input_seq_len=64, num_examples=1_000, num_kv_pairs=4),    
-    MQARConfig(vocab_size=VOCAB_SIZE, input_seq_len=64, num_examples=1_000, num_kv_pairs=9),    
-    MQARConfig(vocab_size=VOCAB_SIZE, input_seq_len=128, num_examples=1_000, num_kv_pairs=16),  
-    MQARConfig(vocab_size=VOCAB_SIZE, input_seq_len=256, num_examples=1_000, num_kv_pairs=36),  
-    MQARConfig(vocab_size=VOCAB_SIZE, input_seq_len=512, num_examples=1_000, num_kv_pairs=64),
-    MQARConfig(vocab_size=VOCAB_SIZE, input_seq_len=1024, num_examples=1_000, num_kv_pairs=144), 
-    MQARConfig(vocab_size=VOCAB_SIZE, input_seq_len=2048, num_examples=1_000, num_kv_pairs=256), 
+    MQARConfig(vocab_size=VOCAB_SIZE, input_seq_len=64, num_examples=1_000, num_kv_pairs=4, random_non_queries=False),    
+    MQARConfig(vocab_size=VOCAB_SIZE, input_seq_len=64, num_examples=1_000, num_kv_pairs=9, random_non_queries=False),    
+    MQARConfig(vocab_size=VOCAB_SIZE, input_seq_len=128, num_examples=1_000, num_kv_pairs=16, random_non_queries=False),  
+    MQARConfig(vocab_size=VOCAB_SIZE, input_seq_len=256, num_examples=1_000, num_kv_pairs=36, random_non_queries=False),  
+    MQARConfig(vocab_size=VOCAB_SIZE, input_seq_len=512, num_examples=1_000, num_kv_pairs=64, random_non_queries=False),
+    MQARConfig(vocab_size=VOCAB_SIZE, input_seq_len=1024, num_examples=1_000, num_kv_pairs=144, random_non_queries=False), 
+    MQARConfig(vocab_size=VOCAB_SIZE, input_seq_len=2048, num_examples=1_000, num_kv_pairs=256, random_non_queries=False), 
 ]
 
 input_seq_len=max([c.input_seq_len for c in train_configs + test_configs])
@@ -75,10 +75,10 @@ models = add_ttt(models, conv_mixer, input_seq_len, model_factory_kwargs)
 
 # convenience for filtering out 
 included = [
-    # "attention", "sliding_window", "delta_net", "gla", "gated_delta_net", 
+    "attention", "sliding_window", "delta_net", "gla", "gated_delta_net", 
     "deepseek_nsa", 
-    # "ttt_linear", "ttt_mlp"
-    ]
+    "ttt_linear", "ttt_mlp"
+]
 models = [m for m in models if any([i in m.name for i in included])]
 
 
