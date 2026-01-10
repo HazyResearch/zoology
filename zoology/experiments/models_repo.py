@@ -338,7 +338,7 @@ def add_deepseek_nsa(models, conv_mixer, input_seq_len, model_factory_kwargs):
             kwargs={"configs": [conv_mixer, delta_net_mixer]}
         )
         model = ModelConfig(
-            block_type="TransformerBlock",
+            block_type=block_type,
             d_model=d_model,
             n_layers=2,
             sequence_mixer=mixer,
@@ -348,4 +348,42 @@ def add_deepseek_nsa(models, conv_mixer, input_seq_len, model_factory_kwargs):
         )
         models.append(model)
     return models
+
+
+# TTT (Test-Time Training)
+def add_ttt(models, conv_mixer, input_seq_len, model_factory_kwargs):
+    block_type = "TransformerBlock"
+    for d_model in [64, 128, 256]:
+        for ttt_type in ["mlp", "linear"]:  
+            for mini_batch_size in [16, 32]:
+                ttt_mixer = dict(
+                    name="zoology.mixers.ttt.TTT",
+                    kwargs={
+                        "num_heads": 2,  # Scale heads with model size
+                        "ttt_layer_type": ttt_type,
+                        "ttt_base_lr": 1.0,
+                        "mini_batch_size": mini_batch_size,
+                        "use_gate": False,
+                        "share_qk": False,
+                        "pre_conv": False,
+                        "conv_kernel": 4,
+                    }
+                )
+                mixer = dict(
+                    name="zoology.mixers.hybrid.Hybrid",
+                    kwargs={"configs": [conv_mixer, ttt_mixer]}
+                )
+                model = ModelConfig(
+                    block_type=block_type,
+                    d_model=d_model,
+                    n_layers=2,
+                    sequence_mixer=mixer,
+                    max_position_embeddings=0,
+                    name=f"ttt_{ttt_type}",
+                    **model_factory_kwargs
+                )
+                models.append(model)
+    return models
+
+
 

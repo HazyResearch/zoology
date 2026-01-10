@@ -10,8 +10,11 @@ import torch.nn as nn
 from einops import rearrange
 from torch.nn import functional as F
 
-from fla.modules import FusedRMSNormSwishGate, RMSNorm, ShortConvolution
-from fla.ops.delta_rule import chunk_delta_rule, fused_recurrent_delta_rule
+try:
+    from fla.modules import FusedRMSNormSwishGate, RMSNorm, ShortConvolution
+    from fla.ops.delta_rule import chunk_delta_rule, fused_recurrent_delta_rule
+except:
+    assert 0, print(f"Need to install fla: pip install flash-linear-attention")
 
 if TYPE_CHECKING:
     from transformers.processing_utils import Unpack

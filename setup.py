@@ -11,10 +11,10 @@ _REQUIRED = [
     "click",
     "pydantic",
     "wandb",
-
-    # for mamba stuff
-    # "mamba_ssm", 
-    # "causal_conv1d"
+    "flash-linear-attention",
+    "rotary-embedding-torch",
+    "causal_conv1d",
+    "einx"
 ]
 
 _OPTIONAL = {

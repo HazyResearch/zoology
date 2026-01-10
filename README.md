@@ -66,11 +66,11 @@ Observations:
 - The ```mamba_ssm``` module (imported for Mamba) is most compatible with PyTorch 2.5
 
 Then, try running an example experiment with: 
-```
+```bash
 python -m zoology.launch zoology/experiments/examples/basic.py
 ```
 This will train a simple two layer transformer on multi-query associative recall. To run a sweep over learning rates, try: 
-```
+```bash
 python -m zoology.launch zoology/experiments/examples/basic_sweep.py
 ```
 If you have access to multiple GPUs, you can run the sweep in parallel by adding the `-p` flag.
