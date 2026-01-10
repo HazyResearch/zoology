@@ -58,8 +58,7 @@ conv_mixer = dict(
 
 from zoology.experiments.models_repo import (
     add_attention, add_sliding_window,add_based, add_mamba2, add_rwkv7, 
-    add_delta_net, add_gla, add_gated_delta_net, add_deepseek_nsa, add_ttt, 
-    add_online_mlp
+    add_delta_net, add_gla, add_gated_delta_net, add_deepseek_nsa, add_ttt
 )
 
 models = add_attention(models, conv_mixer, input_seq_len, model_factory_kwargs)
