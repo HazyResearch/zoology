@@ -6,7 +6,7 @@ import torch
 from pydantic import BaseModel
 
 from .utils import SyntheticDataSection
-from .associative_recall import _mqar, _ar
+from .multiquery_ar import _mqar, _ar
 
 class ARConfig(BaseModel):
     input_seq_len: int = 64

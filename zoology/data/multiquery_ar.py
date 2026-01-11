@@ -22,6 +22,7 @@ def multiquery_ar(
     seed: int,
     power_a: float=0.01,
     num_kv_pairs: int=8,
+    num_passes: int=1,
     random_non_queries: bool=True,
     include_slices: bool=True,
     **kwargs
@@ -67,7 +68,9 @@ def multiquery_ar(
             In Figure 2 of the Zoology paper, we vary the input sequence length from 
             64 to 512 and the number of key-value pairs from 4 to 64.
         seed (int): The seed for the random number generator.
-        num_kv_pairs (int): The number of key-value pairs.
+        num_kv_pairs (int): The number of unique key-value pairs in the sequence. 
+        num_passes (int): The number of passes through the key-value pairs in the sequence
+            This follows the JRT approach (https://arxiv.org/abs/2407.05483)
         train_power_a (float, optional): The power for the power law distribution for 
             training data. Defaults to 0.01.
         test_power_a (float, optional): The power for the power law distribution for 
@@ -84,12 +87,12 @@ def multiquery_ar(
     """
     assert input_seq_len % 2 == 0, "input_seq_len must be even"
     assert vocab_size > input_seq_len
-    assert num_kv_pairs * 4 <= input_seq_len
+    assert num_kv_pairs * 2 * num_passes + num_kv_pairs * 2 <= input_seq_len  
 
     np.random.seed(seed)
 
     # two tokens for key and value
-    context_size = num_kv_pairs * 2
+    context_size = num_kv_pairs * 2 * num_passes
 
     # create keys so that each key is present exactly once in each example
     key_vocab_size = vocab_size // 2
@@ -106,6 +109,7 @@ def multiquery_ar(
     kvs = np.zeros((num_examples, context_size), dtype=np.int64)
     kvs[:, 0::2] = keys
     kvs[:, 1::2] = values
+    kvs = np.tile(kvs, (1, num_passes))
 
     # compute power law
     space = (input_seq_len - context_size) // 2
@@ -134,6 +138,6 @@ def multiquery_ar(
     return DataSegment(
         inputs, 
         labels, 
-        slices={"num_kv_pairs": num_kv_pairs, "input_seq_len": input_seq_len}
+        slices={"num_kv_pairs": num_kv_pairs, "input_seq_len": input_seq_len, "num_passes": num_passes}
     )
 

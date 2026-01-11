@@ -1,6 +1,6 @@
 import numpy as np
 from zoology.config import TrainConfig, ModelConfig, DataConfig, FunctionConfig, ModuleConfig
-from zoology.data.associative_recall import MQARConfig
+from zoology.data.multiquery_ar import MQARConfig
 
 
 configs = []

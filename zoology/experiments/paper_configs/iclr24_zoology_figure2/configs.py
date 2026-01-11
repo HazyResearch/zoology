@@ -1,7 +1,7 @@
 import uuid
 import numpy as np
 from zoology.config import TrainConfig, ModelConfig, DataConfig, DataSegmentConfig, LoggerConfig
-from zoology.data.associative_recall import MQARConfig
+from zoology.data.multiquery_ar import MQARConfig
 
 
 sweep_id = uuid.uuid4().hex[:6]

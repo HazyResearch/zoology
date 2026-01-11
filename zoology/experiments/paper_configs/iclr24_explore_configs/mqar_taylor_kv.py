@@ -32,7 +32,7 @@ for input_seq_len, num_kv_pairs in [
         batch_size=batch_size,
         cache_dir="/var/cr05_data/sim_data/zg-synthetics",
         builder={
-            "name": "zoology.data.associative_recall.multiquery_ar",
+            "name": "zoology.data.multiquery_ar.multiquery_ar",
             "kwargs": {
                 "num_kv_pairs": num_kv_pairs,
                 "train_power_a": 0.01,

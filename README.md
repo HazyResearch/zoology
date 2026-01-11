@@ -42,7 +42,7 @@ We have provided support for various efficient models.
 | Mar 2025  | ArXiv      |  RWKV7         |    RWKV-7 "Goose" with Expressive Dynamic State Evolution                    |      [link](https://arxiv.org/abs/2503.14456)    | 
 
 <div align="center" >
-    <img src="zoology/analysis/paper/zoology_results.png" height=300 alt="MQAR Plot" style="margin-bottom:px"/>
+    <img src="zoology/analysis/paper/zoology_paper/zoology_results.png" height=300 alt="MQAR Plot" style="margin-bottom:px"/>
 </div> 
 
 **Notes:** 

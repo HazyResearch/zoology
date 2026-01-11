@@ -1,11 +1,11 @@
 import uuid
 import numpy as np
 from zoology.config import TrainConfig, DataConfig, LoggerConfig
-from zoology.data.associative_recall import MQARConfig
+from zoology.data.multiquery_ar import MQARConfig
 
 
 sweep_id = uuid.uuid4().hex[:6]
-sweep_name = "original-mqar-sweep" + sweep_id
+sweep_name = "011026-original-mqar-repro-v1" + sweep_id
 
 VOCAB_SIZE = 8_192
 
@@ -34,7 +34,7 @@ data = DataConfig(
     train_configs=train_configs,
     test_configs=test_configs,
     # can pass a tuple if you want a different batch size for train and test
-    batch_size=(batch_size, batch_size / 8),
+    batch_size=(batch_size, batch_size // 8),
     cache_dir="/data/sim/zoology"
 )
 
@@ -75,12 +75,18 @@ models = add_ttt(models, conv_mixer, input_seq_len, model_factory_kwargs)
 
 # convenience for filtering out 
 included = [
-    "attention", "sliding_window", "delta_net", "gla", "gated_delta_net", 
-    "deepseek_nsa", 
+    "attention", "sliding_window", 
+    # "based",
+    # "delta_net", "gla", 
+    "gated_delta_net", 
+    # "deepseek_nsa", 
     "ttt_linear", "ttt_mlp"
     ]
 models = [m for m in models if any([i in m.name for i in included])]
 
+# for model in models:
+#     model.embedding_init_type = "spherical"
+#     model.learnable_word_embeddings = False
 
 # 3. Finally we'll create a train config for each
 configs = []

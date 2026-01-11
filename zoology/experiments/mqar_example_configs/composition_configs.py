@@ -1,7 +1,7 @@
 import uuid
 import numpy as np
 from zoology.config import TrainConfig, DataConfig, LoggerConfig
-from zoology.data.compositional_ar import CompositionalMQARConfig as MQARConfig
+from zoology.data.compositional_mqar import CompositionalMQARConfig as MQARConfig
 
 
 sweep_id = uuid.uuid4().hex[:6]
@@ -35,7 +35,7 @@ data = DataConfig(
     train_configs=train_configs,
     test_configs=test_configs,
     # can pass a tuple if you want a different batch size for train and test
-    batch_size=(batch_size, batch_size / 8),
+    batch_size=(batch_size, batch_size // 8),
     cache_dir="/data/sim/zoology"
 )
 
@@ -75,7 +75,9 @@ models = add_ttt(models, conv_mixer, input_seq_len, model_factory_kwargs)
 
 # convenience for filtering out 
 included = [
-    "attention", "sliding_window", "delta_net", "gla", "gated_delta_net", 
+    "attention", "sliding_window", 
+    "based", 
+    "delta_net", "gla", "gated_delta_net", 
     "deepseek_nsa", 
     "ttt_linear", "ttt_mlp"
     ]
