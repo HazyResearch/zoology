@@ -1,7 +1,7 @@
 import argparse
 from datetime import datetime
 from functools import partial
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union, Literal
 
 from pydantic import BaseModel
 
@@ -81,11 +81,13 @@ class DataConfig(BaseConfig):
 
     # can pass a tuple if you want a different batch size for train and test
     batch_size: Union[int, Tuple[int, int]] = 32
-
     seed: int = 123
-
     cache_dir: str = None
     force_cache: bool = False 
+
+    # JRT style sequences (https://arxiv.org/abs/2407.05483)
+    num_passes: int = 1
+
 
 class ModelConfig(BaseConfig):
     sequence_mixer: ModuleConfig = None
@@ -98,6 +100,7 @@ class ModelConfig(BaseConfig):
     n_layers: int = 2
     max_position_embeddings: int = 64
     learnable_word_embeddings: bool = True
+    embedding_init_type: Literal["default", "spherical", "normal"] = "default"
     vocab_size: int = 8_192
 
     resid_dropout: float = 0.0
@@ -106,7 +109,7 @@ class ModelConfig(BaseConfig):
     layer_norm_epsilon: float = 1e-5
     pad_vocab_size_multiple: int = 1
 
-    block_type: str = "TransformerBlock"
+    block_type: Literal["TransformerBlock", "MambaBlock", "Mamba2Block"] = "TransformerBlock"
     name: str = "default"
 
 class LoggerConfig(BaseConfig):
@@ -121,6 +124,8 @@ class TrainConfig(BaseConfig):
     logger: LoggerConfig = LoggerConfig()
 
     max_epochs: int = 100
+    loss_type: Literal["ce", "mse", "ce_embed"] = "ce"
+    input_type: Literal["discrete", "continuous"] = "discrete"
 
     # stop training once this metric reaches the threshold
     # set metric to None to disable early stopping

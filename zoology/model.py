@@ -17,39 +17,93 @@ class TokenEmbeddings(nn.Module):
         padding_idx=None,
         word_embed_proj_dim=None,
         learnable: bool = True,
+        init_type: str = "default",  # "default", "spherical", "normal"
         device='cuda',
-        dtype='torch.float32',
+        dtype=torch.float32,
     ):
         """
-        GPT-2 Learnable Token and Position Embeddings.
-        If max_position_embeddings <= 0, there's no position embeddings
-        Wwe embed to word_embe_proj_dim dimension then project up to embed_dim
+        Token and Position Embeddings with configurable initialization.
+        
+        Args:
+            embed_dim: Embedding dimension
+            vocab_size: Size of vocabulary
+            max_position_embeddings: Max sequence length (<=0 for no position embeddings)
+            padding_idx: Index for padding token
+            word_embed_proj_dim: If set, embed to this dim then project up
+            learnable: If False, freeze word embeddings
+            init_type: Initialization strategy:
+                - "default": PyTorch default (uniform)
+                - "spherical": Unit vectors on hypersphere
+                - "normal": Standard normal N(0, 1)
+            device: Device to place embeddings on
+            dtype: Data type for embeddings
         """
         super().__init__()
         self.device = device
         self.dtype = dtype
-        if word_embed_proj_dim is None:
-            self.word_embeddings = nn.Embedding(
-                vocab_size, embed_dim, padding_idx=padding_idx
-            )
-            self.project_in = None
-        else:
-            self.word_embeddings = nn.Embedding(
-                vocab_size,
-                word_embed_proj_dim,
-                padding_idx=padding_idx,
-            )
+        
+        # Determine the dimension we're actually embedding to
+        actual_embed_dim = word_embed_proj_dim if word_embed_proj_dim else embed_dim
+        
+        # Create word embeddings
+        self.word_embeddings = nn.Embedding(
+            vocab_size, actual_embed_dim, padding_idx=padding_idx,
+            device=device, dtype=dtype
+        )
+        
+        # Initialize based on init_type
+        self._init_embeddings(self.word_embeddings, init_type, padding_idx)
+        
+        # Optional projection
+        if word_embed_proj_dim is not None:
             self.project_in = nn.Linear(
-                word_embed_proj_dim, embed_dim, bias=False
+                word_embed_proj_dim, embed_dim, bias=False,
+                device=device, dtype=dtype
             )
+        else:
+            self.project_in = None
         if not learnable:
             self.word_embeddings.weight.requires_grad = False
 
+        # Position embeddings
         self.max_position_embeddings = max_position_embeddings
         if self.max_position_embeddings > 0:
             self.position_embeddings = nn.Embedding(
-                max_position_embeddings, embed_dim
+                max_position_embeddings, embed_dim,
+                device=device, dtype=dtype
             )
+
+    def _init_embeddings(self, embedding: nn.Embedding, init_type: str, padding_idx=None):
+        """Initialize embedding weights based on init_type."""
+        if init_type == "default":
+            # Let _init_weights handle it (normal with std=0.02)
+            pass
+        
+        elif init_type == "spherical":
+            # Random vectors normalized to unit length
+            with torch.no_grad():
+                random_vectors = torch.randn_like(embedding.weight)
+                norms = torch.norm(random_vectors, p=2, dim=1, keepdim=True)
+                embedding.weight.copy_(random_vectors / norms)
+                
+                # Zero out padding if needed
+                if padding_idx is not None:
+                    embedding.weight[padding_idx].zero_()
+
+                embedding._no_reinit = True
+        
+        elif init_type == "normal":
+            # Standard normal initialization
+            nn.init.normal_(embedding.weight, mean=0.0, std=1.0)
+            if padding_idx is not None:
+                with torch.no_grad():
+                    embedding.weight[padding_idx].zero_()
+
+            embedding._no_reinit = True
+        
+        else:
+            raise ValueError(f"Unknown init_type: {init_type}. "
+                           f"Choose from 'default', 'spherical', 'normal'")
 
     def forward(self, input_ids, position_ids=None):
         """
@@ -84,14 +138,16 @@ def _init_weights(
                 if not getattr(module.bias, "_no_reinit", False):
                     nn.init.zeros_(module.bias)
         elif isinstance(module, nn.Embedding):
-            nn.init.normal_(module.weight, std=initializer_range)
+            if not getattr(module, "_no_reinit", False): 
+                nn.init.normal_(module.weight, std=initializer_range)
     else:
         if isinstance(module, nn.Linear):
             nn.init.normal_(module.weight, std=initializer_range)
             if module.bias is not None:
                 nn.init.zeros_(module.bias)
         elif isinstance(module, nn.Embedding):
-            nn.init.normal_(module.weight, std=initializer_range)
+            if not getattr(module, "_no_reinit", False):
+                nn.init.normal_(module.weight, std=initializer_range)
 
     if rescale_prenorm_residual:
         if 'Mamba' in block_type:
@@ -167,7 +223,8 @@ class LMBackbone(nn.Module):
             config.d_model, 
             config.vocab_size, 
             config.max_position_embeddings,
-            learnable=config.learnable_word_embeddings
+            learnable=config.learnable_word_embeddings,
+            init_type=config.embedding_init_type
         )
         if config.block_type == 'TransformerBlock':
             block_cls = TransformerBlock
@@ -187,21 +244,57 @@ class LMBackbone(nn.Module):
         self.ln_f = nn.LayerNorm(config.d_model, eps=config.layer_norm_epsilon)
         self.apply(partial(_init_weights, n_layers=config.n_layers, block_type=config.block_type))
 
-    def forward(self, input_ids, position_ids=None):
-        hidden_states = self.embeddings(
-            input_ids,
-            position_ids=position_ids,
-        )
+    def layers_forward(self, hidden_states):
+        """Forward through layers only (skip embeddings)."""
         residual = None
         for layer in self.layers:
             hidden_states, residual = layer(hidden_states, residual)
         dropped = self.drop_f(hidden_states)
         residual = (dropped + residual) if residual is not None else dropped
-        hidden_states = self.ln_f(residual.to(dtype=self.ln_f.weight.dtype))
+        output = self.ln_f(residual.to(dtype=self.ln_f.weight.dtype))
+        return output
+
+    def forward(self, input_ids, position_ids=None):
+        hidden_states = self.embeddings(
+            input_ids,
+            position_ids=position_ids,
+        )
+        hidden_states = self.layers_forward(hidden_states)
         return hidden_states
 
 
+def _compute_state_size(layers, sequence_length: int):
+    try:
+        from zoology.mixers.mamba import MambaBlock
+    except:
+        MambaBlock = None
+    try:
+        from zoology.mixers.mamba2 import Mamba2Block
+    except:
+        Mamba2Block = None
+    state_size = 0
+    for layer in layers:
+        if MambaBlock and isinstance(layer, MambaBlock):
+            mixer = layer.mixer
+        if Mamba2Block and isinstance(layer, Mamba2Block):
+            mixer = layer.mixer
+        elif isinstance(layer, TransformerBlock):
+            mixer = layer.sequence_mixer
+        else: 
+            return None
+        if hasattr(mixer, "state_size"):
+            state_size += mixer.state_size(sequence_length=sequence_length)
+        else:
+            print(f"Layer {type(mixer).__name__} does not have state size")
+            return None
+        
+    return state_size * 4
+
+
 class LanguageModel(nn.Module):
+    """ 
+    Language model that takes input ids and outputs vocabulary logits.
+    """
     def __init__(self, config: ModelConfig):
         super().__init__()
         if config.vocab_size % config.pad_vocab_size_multiple != 0:
@@ -215,39 +308,32 @@ class LanguageModel(nn.Module):
         # Initialize weights and apply final processing
         self.apply(partial(_init_weights, n_layers=config.n_layers, block_type=config.block_type))
 
-        # tie weights
-        self.lm_head.weight = self.backbone.embeddings.word_embeddings.weight
+        # tie weights if word embeddings are learnable
+        if config.learnable_word_embeddings:
+            self.lm_head.weight = self.backbone.embeddings.word_embeddings.weight
 
     def forward(
-        self, input_ids, position_ids=None, state=None
+        self, input_ids, position_ids=None, state=None, return_embeddings=True
     ): 
         hidden_states = self.backbone(input_ids, position_ids=position_ids)
+        if return_embeddings:
+            return hidden_states
         return self.lm_head(hidden_states)
     
     def state_size(self, sequence_length: int):
-        try:
-            from zoology.mixers.mamba import MambaBlock
-        except:
-            MambaBlock = None
-        try:
-            from zoology.mixers.mamba2 import Mamba2Block
-        except:
-            Mamba2Block = None
+        return _compute_state_size(self.backbone.layers, sequence_length)
 
-        state_size = 0
-        for layer in self.backbone.layers:
-            if MambaBlock and isinstance(layer, MambaBlock):
-                mixer = layer.mixer
-            if Mamba2Block and isinstance(layer, Mamba2Block):
-                mixer = layer.mixer
-            elif isinstance(layer, TransformerBlock):
-                mixer = layer.sequence_mixer
-            else: 
-                return None
-            if hasattr(mixer, "state_size"):
-                state_size += mixer.state_size(sequence_length=sequence_length)
-            else:
-                print(f"Layer {type(mixer).__name__} does not have state size")
-                return None
-            
-        return state_size * 4
+
+class ContinuousInputModel(nn.Module):
+    def __init__(self, config: ModelConfig):
+        super().__init__()
+        config = config.copy()
+        self.input_proj = nn.Linear(config.d_model*2, config.d_model)
+        self.backbone = LMBackbone(config)
+        self.output_proj = nn.Linear(config.d_model, config.d_model)  
+    
+    def forward(self, x):
+        return self.output_proj(self.backbone.layers_forward(self.input_proj(x)))
+    
+    def state_size(self, sequence_length: int):
+        return _compute_state_size(self.backbone.layers, sequence_length)

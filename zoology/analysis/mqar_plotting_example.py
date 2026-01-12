@@ -105,7 +105,6 @@ def plot(
     plot_df["model.name"] = plot_df["model.name"].str.replace("_", " ")
     # replace model column name with "Model"
     plot_df["Model"] = _apply_name_replacements(plot_df["model.name"])
-    # plot_df = plot_df.rename(columns={"model.name": "Model"})
 
     # (06/05) adjust the state sizes for rwkv v7
     rwkv_mask = (plot_df["Model"] == "Rwkv7")
@@ -174,6 +173,7 @@ def plot(
 
 # You can find the "default-2025..." tags in the wandb UI under the "launch_id" key for a run. 
 # Each sweep you launch (with an experiments config file) will have a shared launch_id. 
+# NOTE: The "project_name" is the name of the wandb project!
 if __name__ == "__main__" :
     df = fetch_wandb_runs(
         launch_id=[

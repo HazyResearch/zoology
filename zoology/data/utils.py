@@ -2,18 +2,14 @@ import os
 import hashlib
 from pathlib import Path
 import json
-import sys
 from dataclasses import dataclass, asdict
-from typing import Dict, Tuple, List, Union
+from typing import Dict, Tuple, List
 import numpy as np
 
 import torch 
-from tqdm import tqdm
-from torch.utils.data import TensorDataset, DataLoader, Dataset
+from torch.utils.data import DataLoader, Dataset
 
 from zoology.config import DataConfig, DataSegmentConfig
-
-import random
 
 @dataclass
 class DataSegment:
@@ -123,6 +119,37 @@ def prepare_data(config: DataConfig) -> Tuple[DataLoader, DataLoader]:
     )
 
 
+def prepare_continuous_data(config: DataConfig, embeddings: torch.Tensor) -> Tuple[DataLoader, DataLoader]:
+    if isinstance(config.batch_size, int):
+        train_batch_size, test_batch_size = (config.batch_size, config.batch_size)
+    else:
+        train_batch_size, test_batch_size = config.batch_size
+    
+    MAX_SEED = 2 ** 32
+    np.random.seed(config.seed)
+    train_seeds = np.random.randint(0, MAX_SEED // 2, size=len(config.train_configs))
+    test_seeds = np.random.randint(MAX_SEED // 2, MAX_SEED, size=len(config.test_configs))
+    
+    # Inject embeddings into configs
+    for cfg in config.train_configs + config.test_configs:
+        cfg.embeddings = embeddings
+    
+    factory_kwargs = {"cache_dir": None, "force_cache": False}
+    train_segments = _SyntheticDataset([
+        DataSegment.from_config(segment_config, seed=int(seed), **factory_kwargs)
+        for segment_config, seed in zip(config.train_configs, train_seeds)
+    ], batch_size=train_batch_size)
+    test_segments = _SyntheticDataset([
+        DataSegment.from_config(segment_config, seed=int(seed), **factory_kwargs)
+        for segment_config, seed in zip(config.test_configs, test_seeds)
+    ], batch_size=test_batch_size)
+
+    return (
+        DataLoader(ds, batch_size=None, num_workers=0, shuffle=False)
+        for ds in [train_segments, test_segments]
+    )
+
+
 class _SyntheticDataset(Dataset):
     """Simple torch dataset that returns batches instead of individual examples. 
     This is needed to support data that contains different data segments not to be
@@ -147,33 +174,4 @@ class _SyntheticDataset(Dataset):
 
     def __len__(self):
         return len(self.batches)
-
-# def builder_from_single(single_fn: callable):
-#     def _build_from_single(
-#         num_train_examples: int,
-#         num_test_examples: int,
-#         vocab_size: int,
-#         input_seq_len: int,
-#         seed: int,
-#         **kwargs
-#     ):
-#         result = {}
-#         for split, num_examples in [("train", num_train_examples), ("test", num_test_examples)]:
-#             # TODO: we probably wanna parallelize this
-#             inputs, labels = [], []
-#             rng = np.random.default_rng(seed + (0 if split == "train" else 1))
-#             for _ in tqdm(range(num_examples)):
-#                 input, label = single_fn(
-#                     vocab_size=vocab_size,
-#                     input_seq_len=input_seq_len,
-#                     rng=rng,
-#                     **kwargs
-#                 )
-#                 inputs.append(input)
-#                 labels.append(label)
-#             result[f"{split}_inputs"] = torch.stack(inputs)
-#             result[f"{split}_labels"] = torch.stack(labels)
-#         return SyntheticData(**result)
-        
-#     return _build_from_single
 
