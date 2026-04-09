@@ -258,7 +258,7 @@ class DeltaNet(nn.Module):
                 q=q.to(torch.bfloat16),
                 k=k.to(torch.bfloat16),
                 v=v.to(torch.bfloat16),
-                beta=beta,
+                beta=beta.to(torch.bfloat16),
                 initial_state=recurrent_state,
                 output_final_state=use_cache,
                 cu_seqlens=cu_seqlens,
