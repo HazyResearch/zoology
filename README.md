@@ -96,7 +96,7 @@ In this section, we'll walk through how to configure an experiment and launch sw
 *Configuration*. Models, data, and training are controlled by configuration objects. For details on available configuration fields, see the configuration definition in [`zoology/config.py`](zoology/config.py). The configuration is a nested Pydantic model, which can be instantiated as follows:
 ```python
 from zoology.config import TrainConfig, ModelConfig, DataConfig, ModuleConfig, FunctionConfig
-from zoology.data.associative_recall import MQARConfig
+from zoology.data.multiquery_ar import MQARConfig
 
 input_seq_len = 10
 
